@@ -1,22 +1,23 @@
 // frontend/src/screens/EntityListScreen.tsx
-import { useQuery } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
+
 import {
-    GET_CALENDAR_STATS,
-    GET_ELECTRONICS_BY_SATELLITE,
-    GET_MATERIALS,
-    GET_SATELLITES,
+  GET_CALENDAR_STATS,
+  GET_ELECTRONICS_BY_SATELLITE,
+  GET_MATERIALS,
+  GET_SATELLITES,
 } from '../graphql/queries';
-import type { RootStackParamList } from '../navigation/RootNavigator.tsx';
+import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'EntityList'>;
@@ -27,8 +28,9 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
     null
   );
 
+  // ==== МАТЕРИАЛЫ ============================================================
   if (entity === 'materials') {
-    const { data, loading, error } = useQuery(GET_MATERIALS, {
+    const { data, loading, error } = useQuery<any>(GET_MATERIALS, {
       variables: { orderByMass: sort ?? null },
     });
 
@@ -50,8 +52,9 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
     );
   }
 
+  // ==== СПУТНИКИ =============================================================
   if (entity === 'satellites') {
-    const { data, loading, error } = useQuery(GET_SATELLITES);
+    const { data, loading, error } = useQuery<any>(GET_SATELLITES);
 
     return (
       <ScreenWrapper title="Спутники" loading={loading} error={error}>
@@ -69,16 +72,18 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
     );
   }
 
+  // ==== ЭЛЕКТРОНИКА ПО СПУТНИКУ =============================================
   if (entity === 'electronics') {
-    const { data: satsData } = useQuery(GET_SATELLITES);
+    const { data: satsData } = useQuery<any>(GET_SATELLITES);
 
-    const { data, loading, error } = useQuery(
-      GET_ELECTRONICS_BY_SATELLITE,
-      {
-        variables: { satelliteId: selectedSatelliteId },
-        skip: !selectedSatelliteId,
-      }
-    );
+    const {
+      data,
+      loading,
+      error,
+    } = useQuery<any>(GET_ELECTRONICS_BY_SATELLITE, {
+      variables: { satelliteId: selectedSatelliteId },
+      skip: !selectedSatelliteId,
+    });
 
     return (
       <ScreenWrapper
@@ -160,9 +165,10 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
     );
   }
 
+  // ==== КАЛЕНДАРНЫЙ ПЛАН =====================================================
   if (entity === 'calendarStats') {
-    const { data: satsData } = useQuery(GET_SATELLITES);
-    const { data, loading, error } = useQuery(GET_CALENDAR_STATS, {
+    const { data: satsData } = useQuery<any>(GET_SATELLITES);
+    const { data, loading, error } = useQuery<any>(GET_CALENDAR_STATS, {
       variables: { satelliteId: selectedSatelliteId },
       skip: !selectedSatelliteId,
     });
@@ -249,6 +255,8 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
   return null;
 };
 
+// ====================== WRAPPER ==============================================
+
 type WrapperProps = {
   title: string;
   loading: boolean;
@@ -274,10 +282,12 @@ const ScreenWrapper: React.FC<WrapperProps> = ({
       {error && (
         <Text style={styles.error}>Ошибка: {String(error.message)}</Text>
       )}
-      {!loading && !error && children}
+      {!loading && !error ? children : null}
     </View>
   );
 };
+
+// ====================== STYLES ===============================================
 
 const styles = StyleSheet.create({
   container: {
