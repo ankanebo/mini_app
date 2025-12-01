@@ -1,0 +1,354 @@
+// frontend/src/screens/EntityListScreen.tsx
+import { useQuery } from '@apollo/client';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useState } from 'react';
+import {
+    ActivityIndicator,
+    FlatList,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
+import {
+    GET_CALENDAR_STATS,
+    GET_ELECTRONICS_BY_SATELLITE,
+    GET_MATERIALS,
+    GET_SATELLITES,
+} from '../graphql/queries';
+import type { RootStackParamList } from '../navigation/RootNavigator.tsx';
+import { colors } from '../theme/colors';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'EntityList'>;
+
+const EntityListScreen: React.FC<Props> = ({ route }) => {
+  const { entity, sort } = route.params;
+  const [selectedSatelliteId, setSelectedSatelliteId] = useState<string | null>(
+    null
+  );
+
+  if (entity === 'materials') {
+    const { data, loading, error } = useQuery(GET_MATERIALS, {
+      variables: { orderByMass: sort ?? null },
+    });
+
+    return (
+      <ScreenWrapper title="Материалы" loading={loading} error={error}>
+        <FlatList
+          data={data?.materials ?? []}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={styles.row}>
+              <Text style={styles.rowTitle}>{item.name}</Text>
+              <Text style={styles.rowSubtitle}>
+                Тип: {item.type} · Масса: {item.massKg} кг
+              </Text>
+            </View>
+          )}
+        />
+      </ScreenWrapper>
+    );
+  }
+
+  if (entity === 'satellites') {
+    const { data, loading, error } = useQuery(GET_SATELLITES);
+
+    return (
+      <ScreenWrapper title="Спутники" loading={loading} error={error}>
+        <FlatList
+          data={data?.satellites ?? []}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={styles.row}>
+              <Text style={styles.rowTitle}>{item.name}</Text>
+              <Text style={styles.rowSubtitle}>Тип: {item.type}</Text>
+            </View>
+          )}
+        />
+      </ScreenWrapper>
+    );
+  }
+
+  if (entity === 'electronics') {
+    const { data: satsData } = useQuery(GET_SATELLITES);
+
+    const { data, loading, error } = useQuery(
+      GET_ELECTRONICS_BY_SATELLITE,
+      {
+        variables: { satelliteId: selectedSatelliteId },
+        skip: !selectedSatelliteId,
+      }
+    );
+
+    return (
+      <ScreenWrapper
+        title="Электроника по спутнику"
+        loading={loading && !!selectedSatelliteId}
+        error={error}
+      >
+        <Text style={styles.sectionTitle}>Выбери спутник:</Text>
+        <FlatList
+          horizontal
+          data={satsData?.satellites ?? []}
+          keyExtractor={(item) => item.id}
+          style={{ marginBottom: 12 }}
+          renderItem={({ item }) => {
+            const active = selectedSatelliteId === item.id;
+            return (
+              <Pressable
+                onPress={() => setSelectedSatelliteId(item.id)}
+                style={[
+                  styles.chip,
+                  active && { backgroundColor: colors.accentSoft },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    active && { color: '#0b1120' },
+                  ]}
+                >
+                  {item.name}
+                </Text>
+              </Pressable>
+            );
+          }}
+        />
+
+        {selectedSatelliteId && data && (
+          <>
+            <View style={styles.block}>
+              <Text style={styles.blockTitle}>Агрегирующие показатели</Text>
+              <Text style={styles.blockText}>
+                Суммарная стоимость: {data.electronicsTotalCost.toFixed(2)}
+              </Text>
+              <Text style={styles.blockText}>
+                Средняя стоимость: {data.electronicsAvgCost.toFixed(2)}
+              </Text>
+              <Text style={styles.blockText}>
+                Минимум: {data.electronicsMinMaxCost.minCost?.toFixed(2)} (
+                {data.electronicsMinMaxCost.minModel})
+              </Text>
+              <Text style={styles.blockText}>
+                Максимум: {data.electronicsMinMaxCost.maxCost?.toFixed(2)} (
+                {data.electronicsMinMaxCost.maxModel})
+              </Text>
+            </View>
+
+            <Text style={styles.sectionTitle}>Позиции электроники</Text>
+            <FlatList
+              data={data.electronics}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <View style={styles.row}>
+                  <Text style={styles.rowTitle}>{item.name}</Text>
+                  <Text style={styles.rowSubtitle}>
+                    Модель: {item.model} · {item.cost} у.е.
+                  </Text>
+                </View>
+              )}
+            />
+          </>
+        )}
+
+        {!selectedSatelliteId && (
+          <Text style={styles.helperText}>
+            Сначала выбери спутник, чтобы увидеть электронику и отчёты.
+          </Text>
+        )}
+      </ScreenWrapper>
+    );
+  }
+
+  if (entity === 'calendarStats') {
+    const { data: satsData } = useQuery(GET_SATELLITES);
+    const { data, loading, error } = useQuery(GET_CALENDAR_STATS, {
+      variables: { satelliteId: selectedSatelliteId },
+      skip: !selectedSatelliteId,
+    });
+
+    return (
+      <ScreenWrapper
+        title="Календарный план"
+        loading={loading && !!selectedSatelliteId}
+        error={error}
+      >
+        <Text style={styles.sectionTitle}>Выбери спутник:</Text>
+        <FlatList
+          horizontal
+          data={satsData?.satellites ?? []}
+          keyExtractor={(item) => item.id}
+          style={{ marginBottom: 12 }}
+          renderItem={({ item }) => {
+            const active = selectedSatelliteId === item.id;
+            return (
+              <Pressable
+                onPress={() => setSelectedSatelliteId(item.id)}
+                style={[
+                  styles.chip,
+                  active && { backgroundColor: colors.accentSoft },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    active && { color: '#0b1120' },
+                  ]}
+                >
+                  {item.name}
+                </Text>
+              </Pressable>
+            );
+          }}
+        />
+
+        {selectedSatelliteId && data && (
+          <>
+            <View style={styles.block}>
+              <Text style={styles.blockTitle}>Время этапов</Text>
+              <Text style={styles.blockText}>
+                Среднее: {data.calendarStageStats.avgDuration.toFixed(1)} ч
+              </Text>
+              <Text style={styles.blockText}>
+                Максимум: {data.calendarStageStats.maxDuration.toFixed(1)} ч
+              </Text>
+              <Text style={styles.blockText}>
+                Минимум: {data.calendarStageStats.minDuration.toFixed(1)} ч
+              </Text>
+              <Text style={styles.blockText}>
+                Общая длительность спутника:{' '}
+                {data.calendarStageStats.totalDuration.toFixed(1)} ч
+              </Text>
+            </View>
+
+            <Text style={styles.sectionTitle}>Этапы</Text>
+            <FlatList
+              data={data.calendarStages}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <View style={styles.row}>
+                  <Text style={styles.rowTitle}>{item.name}</Text>
+                  <Text style={styles.rowSubtitle}>
+                    Длительность: {item.durationHours} ч
+                  </Text>
+                </View>
+              )}
+            />
+          </>
+        )}
+
+        {!selectedSatelliteId && (
+          <Text style={styles.helperText}>
+            Выбери спутник, чтобы увидеть календарный план и статистику.
+          </Text>
+        )}
+      </ScreenWrapper>
+    );
+  }
+
+  return null;
+};
+
+type WrapperProps = {
+  title: string;
+  loading: boolean;
+  error?: any;
+  children: React.ReactNode;
+};
+
+const ScreenWrapper: React.FC<WrapperProps> = ({
+  title,
+  loading,
+  error,
+  children,
+}) => {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.mainTitle}>{title}</Text>
+      {loading && (
+        <ActivityIndicator
+          color={colors.accent}
+          style={{ marginTop: 16 }}
+        />
+      )}
+      {error && (
+        <Text style={styles.error}>Ошибка: {String(error.message)}</Text>
+      )}
+      {!loading && !error && children}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    padding: 16,
+  },
+  mainTitle: {
+    color: colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  row: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  rowTitle: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  rowSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 13,
+  },
+  sectionTitle: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 8,
+    marginTop: 8,
+  },
+  error: {
+    color: colors.danger,
+    marginTop: 8,
+  },
+  helperText: {
+    color: colors.textSecondary,
+    marginTop: 12,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginRight: 8,
+  },
+  chipText: {
+    color: colors.textPrimary,
+    fontSize: 13,
+  },
+  block: {
+    backgroundColor: colors.card,
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  blockTitle: {
+    color: colors.textPrimary,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  blockText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+  },
+});
+
+export default EntityListScreen;

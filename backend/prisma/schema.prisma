@@ -1,0 +1,176 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+/* ====== СПУТНИКИ ====== */
+
+model SatelliteBody {
+  id    Int    @id @default(autoincrement())
+  name  String @map("name_of_satellite_body")
+  type  String @map("type_of_satellite")
+
+  electronics           Electronics[]
+  techSpecs             TechnicalSpecification[]
+  opCharacteristics     OperationalCharacteristicsOfSatellite[]
+  calendarPlans         CalendarPlan[]
+  stands                Stand[]
+
+  @@map("satellite_body")
+}
+
+model Electronics {
+  id              Int     @id @default(autoincrement())
+  model           String
+  type            String
+  location        String
+  price           Float
+  satelliteBodyId Int     @map("satellite_body_id")
+
+  satelliteBody SatelliteBody @relation(fields: [satelliteBodyId], references: [id])
+
+  @@map("electronics")
+}
+
+model OperationalCharacteristicsOfSatellite {
+  id              Int     @id @default(autoincrement())
+  value           Float   @map("value_")
+  unit            String  @map("measuring_unit_of_value")
+  parameterName   String  @map("name_of_parametr")
+  satelliteBodyId Int     @map("satellite_body_id")
+
+  satelliteBody SatelliteBody @relation(fields: [satelliteBodyId], references: [id])
+
+  @@map("operational_characteristics_of_satellite")
+}
+
+model TechnicalSpecification {
+  id              Int     @id @default(autoincrement())
+  description     String? @map("description_")
+  satelliteBodyId Int     @map("satellite_body_id")
+
+  satelliteBody   SatelliteBody @relation(fields: [satelliteBodyId], references: [id])
+  calendarPlans   CalendarPlan[]
+  stands          Stand[]
+
+  @@map("technical_specification")
+}
+
+model CalendarPlan {
+  id              Int      @id @default(autoincrement())
+  nameOfStage     String   @map("name_of_stage")
+  timeOfFrame     DateTime @map("time_of_frame")
+  duration        Int      @map("length")
+  techSpecId      Int      @map("technical_specification_id")
+  satelliteBodyId Int      @map("technical_specification_satellite_body_id")
+
+  technicalSpecification TechnicalSpecification @relation(fields: [techSpecId], references: [id])
+  satelliteBody          SatelliteBody          @relation(fields: [satelliteBodyId], references: [id])
+
+  @@map("calendar_plan")
+}
+
+/* ====== СТЕНДЫ / СЕНСОРЫ / ТРЕБОВАНИЯ / ТЕСТЫ ====== */
+
+model Stand {
+  id              Int    @id @default(autoincrement())
+  typeOfStand     String @map("type_of_stand")
+  nameOfStand     String @map("name_of_stand")
+  techSpecId      Int    @map("technical_specification_id")
+  satelliteBodyId Int    @map("technical_specification_satellite_body_id")
+
+  technicalSpecification TechnicalSpecification @relation(fields: [techSpecId], references: [id])
+  satelliteBody          SatelliteBody          @relation(fields: [satelliteBodyId], references: [id])
+  sensors                Sensor[]
+  hardwareRequirements   HardwareRequirement[]
+  physicalTestData       PhysicalDataForTesting[]
+  materialOpChars        OperationalCharacteristicsOfMaterials[]
+
+  @@map("stand")
+}
+
+model Sensor {
+  id          Int     @id @default(autoincrement())
+  location    String
+  value       Float?  @map("value_")
+  unit        String? @map("measuring_unit_of_value")
+  description String  @map("description_of_parametr")
+  standId     Int     @map("id_stand")
+
+  stand Stand @relation(fields: [standId], references: [id])
+
+  @@map("sensor")
+}
+
+model HardwareRequirement {
+  id        Int     @id @default(autoincrement())
+  unit      String  @map("measuring_unit_of_value")
+  value     Float   @map("value_")
+  standId   Int     @map("stand_id")
+
+  stand             Stand                               @relation(fields: [standId], references: [id])
+  opCharacteristics OperationalCharacteristicsOfMaterials[]
+  physicalTestData  PhysicalDataForTesting[]
+
+  @@map("hardware_requirements")
+}
+
+model PhysicalDataForTesting {
+  id                    Int     @id @default(autoincrement())
+  value                 Float   @map("phisical_data_value")
+  unit                  String  @map("measuring_unit_of_value")
+  description           String  @map("description_of_parametr")
+  standId               Int     @map("hardware_requirements_stands_id")
+  hardwareRequirementId Int     @map("hardware_requirements_id")
+
+  stand              Stand              @relation(fields: [standId], references: [id])
+  hardwareRequirement HardwareRequirement @relation(fields: [hardwareRequirementId], references: [id])
+
+  @@map("phisical_data_for_testing")
+}
+
+/* ====== МАТЕРИАЛЫ ====== */
+
+model Material {
+  id             Int      @id @default(autoincrement())
+  typeOfMaterial String   @map("type_of_material")
+  amount         Float
+  unit           String   @map("measuring_unit_of_value")
+
+  functionalCharacteristics FunctionalCharacteristicOfMaterial[]
+  opCharacteristics        OperationalCharacteristicsOfMaterials[]
+
+  @@map("material")
+}
+
+model FunctionalCharacteristicOfMaterial {
+  id          Int     @id @default(autoincrement())
+  unit        String  @map("measuring_unit_of_value")
+  value       Float   @map("value_")
+  description String  @map("description_of_parametr")
+  materialId  Int     @map("material_id")
+
+  material Material @relation(fields: [materialId], references: [id])
+
+  @@map("functional_characteristic_of_material")
+}
+
+model OperationalCharacteristicsOfMaterials {
+  id                    Int     @id @default(autoincrement())
+  unit                  String  @map("measuring_unit_of_value")
+  value                 Float   @map("value_")
+  description           String? @map("description_of_value")
+  standId               Int     @map("hardware_requirements_stands_id")
+  hardwareRequirementId Int     @map("hardware_requirements_id")
+  materialId            Int     @map("material_id")
+
+  stand              Stand              @relation(fields: [standId], references: [id])
+  hardwareRequirement HardwareRequirement @relation(fields: [hardwareRequirementId], references: [id])
+  material           Material           @relation(fields: [materialId], references: [id])
+
+  @@map("operational_characteristics_of_materials")
+}
