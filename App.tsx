@@ -1,8 +1,9 @@
-// frontend/App.tsx
+// App.tsx (в корне MyNewApp)
 import { ApolloProvider } from '@apollo/client';
 import React from 'react';
-import { client } from './src/graphql/client';
-import RootNavigator from './src/navigation/RootNavigator.tsx';
+
+import { client } from './frontend/src/graphql/client';
+import RootNavigator from './frontend/src/navigation/RootNavigator';
 
 export default function App() {
   return (
