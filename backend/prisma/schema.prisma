@@ -12,11 +12,11 @@ model SatelliteBody {
   name  String @map("name_of_satellite_body")
   type  String @map("type_of_satellite")
 
-  electronics           Electronics[]
-  techSpecs             TechnicalSpecification[]
-  opCharacteristics     OperationalCharacteristicsOfSatellite[]
-  calendarPlans         CalendarPlan[]
-  stands                Stand[]
+  electronics       Electronics[]
+  techSpecs         TechnicalSpecification[]
+  opCharacteristics OperationalCharacteristicsOfSatellite[]
+  calendarPlans     CalendarPlan[]
+  stands            Stand[]
 
   @@map("satellite_body")
 }
@@ -51,9 +51,9 @@ model TechnicalSpecification {
   description     String? @map("description_")
   satelliteBodyId Int     @map("satellite_body_id")
 
-  satelliteBody   SatelliteBody @relation(fields: [satelliteBodyId], references: [id])
-  calendarPlans   CalendarPlan[]
-  stands          Stand[]
+  satelliteBody SatelliteBody @relation(fields: [satelliteBodyId], references: [id])
+  calendarPlans CalendarPlan[]
+  stands        Stand[]
 
   @@map("technical_specification")
 }
@@ -103,12 +103,12 @@ model Sensor {
 }
 
 model HardwareRequirement {
-  id        Int     @id @default(autoincrement())
-  unit      String  @map("measuring_unit_of_value")
-  value     Float   @map("value_")
-  standId   Int     @map("stand_id")
+  id      Int    @id @default(autoincrement())
+  unit    String @map("measuring_unit_of_value")
+  value   Float  @map("value_")
+  standId Int    @map("stand_id")
 
-  stand             Stand                               @relation(fields: [standId], references: [id])
+  stand             Stand                                 @relation(fields: [standId], references: [id])
   opCharacteristics OperationalCharacteristicsOfMaterials[]
   physicalTestData  PhysicalDataForTesting[]
 
@@ -116,12 +116,12 @@ model HardwareRequirement {
 }
 
 model PhysicalDataForTesting {
-  id                    Int     @id @default(autoincrement())
-  value                 Float   @map("phisical_data_value")
-  unit                  String  @map("measuring_unit_of_value")
-  description           String  @map("description_of_parametr")
-  standId               Int     @map("hardware_requirements_stands_id")
-  hardwareRequirementId Int     @map("hardware_requirements_id")
+  id                    Int    @id @default(autoincrement())
+  value                 Float  @map("phisical_data_value")
+  unit                  String @map("measuring_unit_of_value")
+  description           String @map("description_of_parametr")
+  standId               Int    @map("hardware_requirements_stands_id")
+  hardwareRequirementId Int    @map("hardware_requirements_id")
 
   stand              Stand              @relation(fields: [standId], references: [id])
   hardwareRequirement HardwareRequirement @relation(fields: [hardwareRequirementId], references: [id])
@@ -130,10 +130,10 @@ model PhysicalDataForTesting {
 }
 
 model Material {
-  id             Int      @id @default(autoincrement())
-  typeOfMaterial String   @map("type_of_material")
+  id             Int    @id @default(autoincrement())
+  typeOfMaterial String @map("type_of_material")
   amount         Float
-  unit           String   @map("measuring_unit_of_value")
+  unit           String @map("measuring_unit_of_value")
 
   functionalCharacteristics FunctionalCharacteristicOfMaterial[]
   opCharacteristics        OperationalCharacteristicsOfMaterials[]
@@ -142,11 +142,11 @@ model Material {
 }
 
 model FunctionalCharacteristicOfMaterial {
-  id          Int     @id @default(autoincrement())
-  unit        String  @map("measuring_unit_of_value")
-  value       Float   @map("value_")
-  description String  @map("description_of_parametr")
-  materialId  Int     @map("material_id")
+  id          Int    @id @default(autoincrement())
+  unit        String @map("measuring_unit_of_value")
+  value       Float  @map("value_")
+  description String @map("description_of_parametr")
+  materialId  Int    @map("material_id")
 
   material Material @relation(fields: [materialId], references: [id])
 
@@ -162,9 +162,25 @@ model OperationalCharacteristicsOfMaterials {
   hardwareRequirementId Int     @map("hardware_requirements_id")
   materialId            Int     @map("material_id")
 
-  stand              Stand              @relation(fields: [standId], references: [id])
-  hardwareRequirement HardwareRequirement @relation(fields: [hardwareRequirementId], references: [id])
-  material           Material           @relation(fields: [materialId], references: [id])
+  // ВАЖНО: у каждой связи своё имя внешнего ключа через map,
+  // чтобы Prisma не ругалась на одинаковые constraint name
+  stand Stand @relation(
+    fields:     [standId],
+    references: [id],
+    map:        "oper_char_mat_stand_fkey"
+  )
+
+  hardwareRequirement HardwareRequirement @relation(
+    fields:     [hardwareRequirementId],
+    references: [id],
+    map:        "oper_char_mat_hwreq_fkey"
+  )
+
+  material Material @relation(
+    fields:     [materialId],
+    references: [id],
+    map:        "oper_char_mat_material_fkey"
+  )
 
   @@map("operational_characteristics_of_materials")
 }
