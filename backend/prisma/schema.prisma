@@ -7,8 +7,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-/* ====== СПУТНИКИ ====== */
-
 model SatelliteBody {
   id    Int    @id @default(autoincrement())
   name  String @map("name_of_satellite_body")
@@ -74,8 +72,6 @@ model CalendarPlan {
   @@map("calendar_plan")
 }
 
-/* ====== СТЕНДЫ / СЕНСОРЫ / ТРЕБОВАНИЯ / ТЕСТЫ ====== */
-
 model Stand {
   id              Int    @id @default(autoincrement())
   typeOfStand     String @map("type_of_stand")
@@ -132,8 +128,6 @@ model PhysicalDataForTesting {
 
   @@map("phisical_data_for_testing")
 }
-
-/* ====== МАТЕРИАЛЫ ====== */
 
 model Material {
   id             Int      @id @default(autoincrement())
