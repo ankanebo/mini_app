@@ -162,13 +162,8 @@ model OperationalCharacteristicsOfMaterials {
   hardwareRequirementId Int     @map("hardware_requirements_id")
   materialId            Int     @map("material_id")
 
-  // ВАЖНО: у каждой связи своё имя внешнего ключа через map,
-  // чтобы Prisma не ругалась на одинаковые constraint name
-  stand Stand @relation(
-    fields:     [standId],
-    references: [id],
-    map:        "oper_char_mat_stand_fkey"
-  )
+  // у каждой связи своё имя внешнего ключа, чтобы не конфликтовали
+  stand Stand @relation(fields: [standId], references: [id], map: "oper_char_mat_stand_fkey")
 
   hardwareRequirement HardwareRequirement @relation(
     fields:     [hardwareRequirementId],
@@ -176,11 +171,7 @@ model OperationalCharacteristicsOfMaterials {
     map:        "oper_char_mat_hwreq_fkey"
   )
 
-  material Material @relation(
-    fields:     [materialId],
-    references: [id],
-    map:        "oper_char_mat_material_fkey"
-  )
+  material Material @relation(fields: [materialId], references: [id], map: "oper_char_mat_material_fkey")
 
   @@map("operational_characteristics_of_materials")
 }
