@@ -31,19 +31,21 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
   // ==== МАТЕРИАЛЫ ============================================================
   if (entity === 'materials') {
     const { data, loading, error } = useQuery<any>(GET_MATERIALS, {
-      variables: { orderByMass: sort ?? null },
+      // на бэке ожидается переменная orderByAmount
+      variables: sort ? { orderByAmount: sort } : undefined,
     });
 
     return (
       <ScreenWrapper title="Материалы" loading={loading} error={error}>
         <FlatList
           data={data?.materials ?? []}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => (
             <View style={styles.row}>
-              <Text style={styles.rowTitle}>{item.name}</Text>
+              {/* В схеме поле typeOfMaterial, его и показываем в заголовке */}
+              <Text style={styles.rowTitle}>{item.typeOfMaterial}</Text>
               <Text style={styles.rowSubtitle}>
-                Тип: {item.type} · Масса: {item.massKg} кг
+                Тип: {item.typeOfMaterial} · Масса: {item.amount} {item.unit}
               </Text>
             </View>
           )}
@@ -60,7 +62,7 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
       <ScreenWrapper title="Спутники" loading={loading} error={error}>
         <FlatList
           data={data?.satellites ?? []}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => (
             <View style={styles.row}>
               <Text style={styles.rowTitle}>{item.name}</Text>
@@ -76,14 +78,13 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
   if (entity === 'electronics') {
     const { data: satsData } = useQuery<any>(GET_SATELLITES);
 
-    const {
-      data,
-      loading,
-      error,
-    } = useQuery<any>(GET_ELECTRONICS_BY_SATELLITE, {
-      variables: { satelliteId: selectedSatelliteId },
-      skip: !selectedSatelliteId,
-    });
+    const { data, loading, error } = useQuery<any>(
+      GET_ELECTRONICS_BY_SATELLITE,
+      {
+        variables: { satelliteId: selectedSatelliteId },
+        skip: !selectedSatelliteId,
+      }
+    );
 
     return (
       <ScreenWrapper
@@ -95,7 +96,7 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
         <FlatList
           horizontal
           data={satsData?.satellites ?? []}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           style={{ marginBottom: 12 }}
           renderItem={({ item }) => {
             const active = selectedSatelliteId === item.id;
@@ -143,12 +144,13 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
             <Text style={styles.sectionTitle}>Позиции электроники</Text>
             <FlatList
               data={data.electronics}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => String(item.id)}
               renderItem={({ item }) => (
                 <View style={styles.row}>
-                  <Text style={styles.rowTitle}>{item.name}</Text>
+                  {/* в схеме поле model, а цена — price */}
+                  <Text style={styles.rowTitle}>{item.model}</Text>
                   <Text style={styles.rowSubtitle}>
-                    Модель: {item.model} · {item.cost} у.е.
+                    Модель: {item.model} · {item.price} у.е.
                   </Text>
                 </View>
               )}
@@ -183,7 +185,7 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
         <FlatList
           horizontal
           data={satsData?.satellites ?? []}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           style={{ marginBottom: 12 }}
           renderItem={({ item }) => {
             const active = selectedSatelliteId === item.id;
@@ -230,12 +232,13 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
             <Text style={styles.sectionTitle}>Этапы</Text>
             <FlatList
               data={data.calendarStages}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => String(item.id)}
               renderItem={({ item }) => (
                 <View style={styles.row}>
-                  <Text style={styles.rowTitle}>{item.name}</Text>
+                  {/* поля в схеме: nameOfStage и duration */}
+                  <Text style={styles.rowTitle}>{item.nameOfStage}</Text>
                   <Text style={styles.rowSubtitle}>
-                    Длительность: {item.durationHours} ч
+                    Длительность: {item.duration} ч
                   </Text>
                 </View>
               )}
