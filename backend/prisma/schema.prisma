@@ -1,3 +1,5 @@
+// prisma/schema.prisma
+
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
@@ -6,7 +8,6 @@ datasource db {
 generator client {
   provider = "prisma-client-js"
 }
-
 
 model SatelliteBody {
   id    Int    @id @default(autoincrement())
@@ -36,11 +37,13 @@ model Electronics {
 }
 
 model OperationalCharacteristicsOfSatellite {
-  id              Int     @id @default(autoincrement())
-  value           Float   @map("value_")
-  unit            String  @map("measuring_unit_of_value")
-  parameterName   String  @map("name_of_parametr")
-  satelliteBodyId Int     @map("satellite_body_id")
+  id              Int    @id @default(autoincrement())
+  // ВАЖНО: имя колонки в БД — value (без подчёркивания),
+  // поэтому убираем неправильный map("value_")
+  value           Float  @map("value")
+  unit            String @map("measuring_unit_of_value")
+  parameterName   String @map("name_of_parametr")
+  satelliteBodyId Int    @map("satellite_body_id")
 
   satelliteBody SatelliteBody @relation(fields: [satelliteBodyId], references: [id])
 
@@ -124,7 +127,7 @@ model PhysicalDataForTesting {
   standId               Int    @map("hardware_requirements_stands_id")
   hardwareRequirementId Int    @map("hardware_requirements_id")
 
-  stand              Stand              @relation(fields: [standId], references: [id])
+  stand              Stand               @relation(fields: [standId], references: [id])
   hardwareRequirement HardwareRequirement @relation(fields: [hardwareRequirementId], references: [id])
 
   @@map("phisical_data_for_testing")
@@ -163,10 +166,9 @@ model OperationalCharacteristicsOfMaterials {
   hardwareRequirementId Int     @map("hardware_requirements_id")
   materialId            Int     @map("material_id")
 
-  // у каждой связи своё имя внешнего ключа, чтобы не конфликтовали
-  stand Stand @relation(fields: [standId], references: [id], map: "oper_char_mat_stand_fkey")
+  stand              Stand               @relation(fields: [standId], references: [id], map: "oper_char_mat_stand_fkey")
   hardwareRequirement HardwareRequirement @relation(fields: [hardwareRequirementId], references: [id], map: "oper_char_mat_hwreq_fkey")
-  material Material @relation(fields: [materialId], references: [id], map: "oper_char_mat_material_fkey")
+  material           Material            @relation(fields: [materialId], references: [id], map: "oper_char_mat_material_fkey")
 
   @@map("operational_characteristics_of_materials")
 }

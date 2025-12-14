@@ -2,9 +2,11 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
+
 import EntityListScreen from '../screens/EntityListScreen';
 import HomeScreen from '../screens/HomeScreen';
 import RoleSelectScreen from '../screens/RoleSelectScreen';
+import SatelliteAdminScreen from '../screens/SatelliteAdminScreen';
 
 export type Role = 'manager' | 'engineer' | 'admin';
 
@@ -13,13 +15,12 @@ export type RootStackParamList = {
   Home: { role: Role };
   EntityList: {
     role: Role;
-    entity:
-      | 'materials'
-      | 'satellites'
-      | 'electronics'
-      | 'calendarStats';
+    entity: 'materials' | 'satellites' | 'electronics' | 'calendarStats';
     satelliteId?: string;
     sort?: 'asc' | 'desc';
+  };
+  SatelliteAdmin: {
+    role: Role;
   };
 };
 
@@ -49,6 +50,11 @@ export default function RootNavigator() {
           name="EntityList"
           component={EntityListScreen}
           options={{ title: 'Данные' }}
+        />
+        <Stack.Screen
+          name="SatelliteAdmin"
+          component={SatelliteAdminScreen}
+          options={{ title: 'Управление спутниками' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

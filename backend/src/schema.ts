@@ -14,6 +14,8 @@ export const typeDefs = gql`
     type: String!
     electronics: [Electronics!]!
     calendar: [CalendarStage!]!
+    technicalSpecs: [TechnicalSpecification!]!
+    opCharacteristics: [SatelliteOperationalCharacteristic!]!
   }
 
   type Electronics {
@@ -103,31 +105,47 @@ export const typeDefs = gql`
     totalDuration: Float
   }
 
+  type TechnicalSpecification {
+    id: ID!
+    description: String
+  }
+
+  type SatelliteOperationalCharacteristic {
+    id: ID!
+    value: Float!
+    unit: String!
+    parameterName: String!
+  }
+
   type Query {
     # базовое
     satellites: [Satellite!]!
 
-    # материалы (руководитель)
+    # материалы
     materials(orderByAmount: SortOrder): [Material!]!
     materialsFull(orderByAmount: SortOrder): [MaterialFull!]!
 
-    # электроника + агрегаты (руководитель / админ)
+    # тех. документация и оп. характеристики спутника
+    technicalSpecifications(satelliteId: ID!): [TechnicalSpecification!]!
+    satelliteOpCharacteristics(satelliteId: ID!): [SatelliteOperationalCharacteristic!]!
+
+    # электроника + агрегаты
     electronics(satelliteId: ID!): [Electronics!]!
     electronicsTotalCost(satelliteId: ID!): Float!
     electronicsAvgCost(satelliteId: ID!): Float!
     electronicsMinMaxCost(satelliteId: ID!): ElectronicsMinMax!
 
-    # календарный план + агрегаты (руководитель / админ)
+    # календарный план + агрегаты
     calendarStages(satelliteId: ID!): [CalendarStage!]!
     calendarStageStats(satelliteId: ID!): CalendarStageStats!
 
-    # стенды, сенсоры, требования, испытания (руководитель / инженер)
+    # стенды, сенсоры, требования, испытания
     stands(satelliteId: ID): [Stand!]!
     sensors(standId: ID, satelliteId: ID): [Sensor!]!
     hardwareRequirements(standId: ID, satelliteId: ID): [HardwareRequirement!]!
     physicalTestData(standId: ID!): [PhysicalTestData!]!
 
-    # операционные характеристики материалов (фильтр по стенду и/или материалу)
+    # операционные характеристики материалов
     materialOperationalCharacteristics(
       standId: ID
       materialId: ID
@@ -135,8 +153,18 @@ export const typeDefs = gql`
   }
 
   type Mutation {
-    # Админ
+    # Админ: спутники
     addSatellite(name: String!, type: String!): Satellite!
+
+    # Админ: оп. характеристики спутника
+    addSatelliteOpCharacteristic(
+      satelliteId: ID!
+      parameterName: String!
+      value: Float!
+      unit: String!
+    ): SatelliteOperationalCharacteristic!
+
+    # Админ: электроника
     addElectronics(
       satelliteId: ID!
       model: String!
@@ -146,6 +174,10 @@ export const typeDefs = gql`
     ): Electronics!
     deleteElectronics(id: ID!): Boolean!
 
+    # Обновление цены электроники
+    updateElectronicsPrice(id: ID!, price: Float!): Electronics!
+
+    # Админ: календарный план
     addCalendarStage(
       satelliteId: ID!
       nameOfStage: String!
@@ -154,7 +186,7 @@ export const typeDefs = gql`
     ): CalendarStage!
     deleteCalendarStage(id: ID!): Boolean!
 
-    # Инженер
+    # Инженер: материалы
     addMaterial(
       typeOfMaterial: String!
       amount: Float!
@@ -162,6 +194,7 @@ export const typeDefs = gql`
     ): Material!
     deleteMaterial(id: ID!): Boolean!
 
+    # Инженер: стенды
     addStand(
       satelliteId: ID!
       nameOfStand: String!
@@ -169,6 +202,7 @@ export const typeDefs = gql`
     ): Stand!
     deleteStand(id: ID!): Boolean!
 
+    # Инженер: сенсоры
     addSensor(
       standId: ID!
       location: String!
@@ -194,6 +228,24 @@ export const resolvers = {
         orderBy: args.orderByAmount
           ? { amount: args.orderByAmount }
           : undefined,
+      }),
+
+    technicalSpecifications: (
+      _: any,
+      args: { satelliteId: string },
+      { prisma }: Context
+    ) =>
+      prisma.technicalSpecification.findMany({
+        where: { satelliteBodyId: Number(args.satelliteId) },
+      }),
+
+    satelliteOpCharacteristics: (
+      _: any,
+      args: { satelliteId: string },
+      { prisma }: Context
+    ) =>
+      prisma.operationalCharacteristicsOfSatellite.findMany({
+        where: { satelliteBodyId: Number(args.satelliteId) },
       }),
 
     materialsFull: async (
@@ -374,7 +426,6 @@ export const resolvers = {
   },
 
   Mutation: {
-    // Админ
     addSatellite: (
       _: any,
       args: { name: string; type: string },
@@ -384,6 +435,25 @@ export const resolvers = {
         data: {
           name: args.name,
           type: args.type,
+        },
+      }),
+
+    addSatelliteOpCharacteristic: (
+      _: any,
+      args: {
+        satelliteId: string;
+        parameterName: string;
+        value: number;
+        unit: string;
+      },
+      { prisma }: Context
+    ) =>
+      prisma.operationalCharacteristicsOfSatellite.create({
+        data: {
+          satelliteBodyId: Number(args.satelliteId),
+          parameterName: args.parameterName,
+          value: args.value,
+          unit: args.unit,
         },
       }),
 
@@ -415,6 +485,20 @@ export const resolvers = {
     ) => {
       await prisma.electronics.delete({ where: { id: Number(args.id) } });
       return true;
+    },
+
+    updateElectronicsPrice: async (
+      _: any,
+      args: { id: string; price: number },
+      { prisma }: Context
+    ) => {
+      if (args.price < 0) {
+        throw new Error('Цена электроники не может быть отрицательной');
+      }
+      return prisma.electronics.update({
+        where: { id: Number(args.id) },
+        data: { price: args.price },
+      });
     },
 
     addCalendarStage: async (
@@ -453,8 +537,6 @@ export const resolvers = {
       await prisma.calendarPlan.delete({ where: { id: Number(args.id) } });
       return true;
     },
-
-    // Инженер
 
     addMaterial: (
       _: any,
@@ -544,8 +626,6 @@ export const resolvers = {
     },
   },
 
-  // связи
-
   Satellite: {
     electronics: (parent: any, _: any, { prisma }: Context) =>
       prisma.electronics.findMany({
@@ -553,6 +633,14 @@ export const resolvers = {
       }),
     calendar: (parent: any, _: any, { prisma }: Context) =>
       prisma.calendarPlan.findMany({
+        where: { satelliteBodyId: parent.id },
+      }),
+    technicalSpecs: (parent: any, _: any, { prisma }: Context) =>
+      prisma.technicalSpecification.findMany({
+        where: { satelliteBodyId: parent.id },
+      }),
+    opCharacteristics: (parent: any, _: any, { prisma }: Context) =>
+      prisma.operationalCharacteristicsOfSatellite.findMany({
         where: { satelliteBodyId: parent.id },
       }),
   },
@@ -572,8 +660,5 @@ export const resolvers = {
       prisma.stand.findUnique({ where: { id: parent.standId } }),
   },
 
-  MaterialOperationalCharacteristic: {
-    // этот тип мы собираем руками в Query.materialOperationalCharacteristics,
-    // поэтому тут отдельного резолвера не нужно
-  },
+  MaterialOperationalCharacteristic: {},
 };

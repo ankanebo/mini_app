@@ -2,23 +2,24 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+
 import ActionButton from '../components/ActionButton';
 import type { Role, RootStackParamList } from '../navigation/RootNavigator.tsx';
 import { colors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
+type SectionAction = {
+  label: string;
+  entity?: 'materials' | 'satellites' | 'electronics' | 'calendarStats';
+  params?: Record<string, any>;
+  // если указано target === 'SatelliteAdmin', уходим на экран администрирования
+  target?: 'EntityList' | 'SatelliteAdmin';
+};
+
 type Section = {
   title: string;
-  actions: {
-    label: string;
-    entity:
-      | 'materials'
-      | 'satellites'
-      | 'electronics'
-      | 'calendarStats';
-    params?: Record<string, any>;
-  }[];
+  actions: SectionAction[];
 };
 
 const buildSections = (role: Role): Section[] => {
@@ -27,16 +28,16 @@ const buildSections = (role: Role): Section[] => {
       title: 'Материалы и сырьё',
       actions: [
         {
-          label:
-            'Типы сырья (по массе, по возрастанию)',
+          label: 'Типы сырья (по массе, по возрастанию)',
           entity: 'materials',
           params: { sort: 'asc' },
+          target: 'EntityList',
         },
         {
-          label:
-            'Типы сырья (по массе, по убыванию)',
+          label: 'Типы сырья (по массе, по убыванию)',
           entity: 'materials',
           params: { sort: 'desc' },
+          target: 'EntityList',
         },
       ],
     },
@@ -46,11 +47,12 @@ const buildSections = (role: Role): Section[] => {
         {
           label: 'Список спутников',
           entity: 'satellites',
+          target: 'EntityList',
         },
         {
-          label:
-            'Календарный план (нужно выбрать спутник)',
+          label: 'Календарный план (нужно выбрать спутник)',
           entity: 'calendarStats',
+          target: 'EntityList',
         },
       ],
     },
@@ -58,9 +60,9 @@ const buildSections = (role: Role): Section[] => {
       title: 'Электроника',
       actions: [
         {
-          label:
-            'Электроника по спутнику (стоимость и агрегаты)',
+          label: 'Электроника по спутнику (стоимость и агрегаты)',
           entity: 'electronics',
+          target: 'EntityList',
         },
       ],
     },
@@ -70,11 +72,10 @@ const buildSections = (role: Role): Section[] => {
     base.push({
       title: 'Инженерные операции',
       actions: [
-        // здесь можно сделать переход на отдельные экраны форм
-        // для простоты сейчас всё через EntityList
         {
           label: 'Работа с документацией, стендами и сенсорами (шаблон)',
           entity: 'satellites',
+          target: 'EntityList',
         },
       ],
     });
@@ -85,8 +86,8 @@ const buildSections = (role: Role): Section[] => {
       title: 'Администрирование',
       actions: [
         {
-          label: 'Управление спутниками и этапами (шаблон)',
-          entity: 'satellites',
+          label: 'Управление спутниками и этапами',
+          target: 'SatelliteAdmin',
         },
       ],
     });
@@ -110,8 +111,8 @@ const HomeScreen: React.FC<Props> = ({ route, navigation }) => {
             : 'Руководитель'}
         </Text>
         <Text style={styles.subtitle}>
-          Выбери действие. В следующей версии сюда можно добавить выпадающие
-          панели с формами для добавления/удаления записей.
+          Выбери действие. Для администратора доступно управление спутниками и
+          этапами.
         </Text>
 
         {sections.map((section) => (
@@ -121,13 +122,18 @@ const HomeScreen: React.FC<Props> = ({ route, navigation }) => {
               <ActionButton
                 key={action.label}
                 label={action.label}
-                onPress={() =>
-                  navigation.navigate('EntityList', {
-                    role,
-                    entity: action.entity,
-                    ...(action.params || {}),
-                  })
-                }
+                onPress={() => {
+                  if (action.target === 'SatelliteAdmin') {
+                    navigation.navigate('SatelliteAdmin', { role });
+                  } else {
+                    // по умолчанию – список EntityList
+                    navigation.navigate('EntityList', {
+                      role,
+                      entity: action.entity as any,
+                      ...(action.params || {}),
+                    });
+                  }
+                }}
               />
             ))}
           </View>

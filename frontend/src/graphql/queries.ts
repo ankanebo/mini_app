@@ -58,3 +58,95 @@ export const GET_CALENDAR_STATS = gql`
     }
   }
 `;
+
+export const UPDATE_ELECTRONICS_PRICE = gql`
+  mutation UpdateElectronicsPrice($id: ID!, $price: Float!) {
+    updateElectronicsPrice(id: $id, price: $price) {
+      id
+      price
+    }
+  }
+`;
+
+// детали спутника для экрана управления
+export const GET_TECH_SPECS_AND_OPCHAR = gql`
+  query SatelliteDetails($satelliteId: ID!) {
+    technicalSpecifications(satelliteId: $satelliteId) {
+      id
+      description
+    }
+    satelliteOpCharacteristics(satelliteId: $satelliteId) {
+      id
+      parameterName
+      value
+      unit
+    }
+  }
+`;
+
+// мутации администратора
+export const ADD_SATELLITE = gql`
+  mutation AddSatellite($name: String!, $type: String!) {
+    addSatellite(name: $name, type: $type) {
+      id
+      name
+      type
+    }
+  }
+`;
+
+export const ADD_ELECTRONICS = gql`
+  mutation AddElectronics(
+    $satelliteId: ID!
+    $model: String!
+    $type: String!
+    $location: String!
+    $price: Float!
+  ) {
+    addElectronics(
+      satelliteId: $satelliteId
+      model: $model
+      type: $type
+      location: $location
+      price: $price
+    ) {
+      id
+    }
+  }
+`;
+
+export const ADD_SATELLITE_OPCHAR = gql`
+  mutation AddSatelliteOpCharacteristic(
+    $satelliteId: ID!
+    $parameterName: String!
+    $value: Float!
+    $unit: String!
+  ) {
+    addSatelliteOpCharacteristic(
+      satelliteId: $satelliteId
+      parameterName: $parameterName
+      value: $value
+      unit: $unit
+    ) {
+      id
+    }
+  }
+`;
+
+export const ADD_CALENDAR_STAGE = gql`
+  mutation AddCalendarStage(
+    $satelliteId: ID!
+    $nameOfStage: String!
+    $timeOfFrame: String!
+    $duration: Int!
+  ) {
+    addCalendarStage(
+      satelliteId: $satelliteId
+      nameOfStage: $nameOfStage
+      timeOfFrame: $timeOfFrame
+      duration: $duration
+    ) {
+      id
+    }
+  }
+`;
