@@ -20,8 +20,10 @@ import {
 import {
   GET_CALENDAR_STATS,
   GET_ELECTRONICS_BY_SATELLITE,
-  GET_MATERIALS,
+  GET_MATERIALS_FULL,
   GET_SATELLITES,
+  GET_STANDS,
+  GET_STAND_RESOURCES,
   UPDATE_ELECTRONICS_PRICE,
   UPDATE_CALENDAR_STAGE,
   DELETE_CALENDAR_STAGE,
@@ -35,9 +37,16 @@ type Props = NativeStackScreenProps<RootStackParamList, 'EntityList'>;
 const EntityListScreen: React.FC<Props> = ({ route }) => {
   const { entity, sort, role } = route.params;
   const isAdmin = role === 'admin';
+  const isMaterials = entity === 'materialsFull';
+  const isElectronics = entity === 'electronics';
+  const isCalendar = entity === 'calendarStats';
+  const isStand = entity === 'standTests';
 
   const [selectedSatelliteId, setSelectedSatelliteId] =
     useState<string | null>(null);
+  const [standSatelliteId, setStandSatelliteId] =
+    useState<string | null>(null);
+  const [selectedStandId, setSelectedStandId] = useState<string | null>(null);
   const [editStageId, setEditStageId] = useState('');
   const [editStageName, setEditStageName] = useState('');
   const [editStageTime, setEditStageTime] = useState('');
@@ -48,6 +57,29 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
     id: string;
     name: string;
   } | null>(null);
+
+  // Queries (декларируем один раз)
+  const satellitesQuery = useQuery<any>(GET_SATELLITES);
+  const materialsFullQuery = useQuery<any>(GET_MATERIALS_FULL, {
+    variables: { orderByAmount: sort ?? null },
+    skip: !isMaterials,
+  });
+  const electronicsQuery = useQuery<any>(GET_ELECTRONICS_BY_SATELLITE, {
+    variables: { satelliteId: selectedSatelliteId },
+    skip: !isElectronics || !selectedSatelliteId,
+  });
+  const calendarStatsQuery = useQuery<any>(GET_CALENDAR_STATS, {
+    variables: { satelliteId: selectedSatelliteId },
+    skip: !isCalendar || !selectedSatelliteId,
+  });
+  const standsQuery = useQuery<any>(GET_STANDS, {
+    variables: { satelliteId: standSatelliteId },
+    skip: !isStand,
+  });
+  const standResourcesQuery = useQuery<any>(GET_STAND_RESOURCES, {
+    variables: { standId: selectedStandId },
+    skip: !isStand || !selectedStandId,
+  });
 
   const formatDate = (value: any) => {
     if (value === null || value === undefined) return '—';
@@ -100,52 +132,112 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
   const [updateStage, { loading: updatingStage }] = useMutation(
     UPDATE_CALENDAR_STAGE,
     {
-      refetchQueries: selectedSatelliteId
-        ? [
-            {
-              query: GET_CALENDAR_STATS,
-              variables: { satelliteId: selectedSatelliteId },
-            },
-          ]
-        : [],
+      refetchQueries: () =>
+        selectedSatelliteId
+          ? [
+              {
+                query: GET_CALENDAR_STATS,
+                variables: { satelliteId: selectedSatelliteId },
+              },
+            ]
+          : [],
       onError: (err) => Alert.alert('Ошибка', err.message),
     },
   );
 
-  // ===================== МАТЕРИАЛЫ ==========================================
-  if (entity === 'materials') {
-    const { data, loading, error } = useQuery<any>(GET_MATERIALS, {
-      variables: { orderByAmount: sort ?? null },
-    });
+  const [deleteStage] = useMutation(
+    DELETE_CALENDAR_STAGE,
+    {
+      refetchQueries: () =>
+        selectedSatelliteId
+          ? [
+              {
+                query: GET_CALENDAR_STATS,
+                variables: { satelliteId: selectedSatelliteId },
+              },
+            ]
+          : [],
+    },
+  );
 
+  const [deleteElectronics, { loading: deletingElectronics }] = useMutation(
+    DELETE_ELECTRONICS,
+    {
+      refetchQueries: () =>
+        selectedSatelliteId
+          ? [
+              {
+                query: GET_ELECTRONICS_BY_SATELLITE,
+                variables: { satelliteId: selectedSatelliteId },
+              },
+            ]
+          : [],
+    },
+  );
+
+  // ===================== МАТЕРИАЛЫ + ХАРАКТЕРИСТИКИ =========================
+  if (entity === 'materialsFull') {
     return (
-      <ScreenWrapper title="Материалы" loading={loading} error={error}>
-        <FlatList
-          data={data?.materials ?? []}
-          keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <View style={styles.row}>
-              <Text style={styles.rowTitle}>{item.typeOfMaterial}</Text>
+      <ScreenWrapper
+        title="Материалы и характеристики"
+        loading={materialsFullQuery.loading}
+        error={materialsFullQuery.error}
+      >
+        <ScrollView contentContainerStyle={styles.listContent}>
+          {(materialsFullQuery.data?.materialsFull ?? []).map((item: any) => (
+            <View key={item.material.id} style={styles.row}>
+              <Text style={styles.rowTitle}>{item.material.typeOfMaterial}</Text>
               <Text style={styles.rowSubtitle}>
-                Количество: {item.amount} {item.unit}
+                Количество: {item.material.amount} {item.material.unit}
               </Text>
+
+              <Text style={[styles.sectionTitle, { marginTop: 10 }]}>
+                Функциональные
+              </Text>
+              {item.functional.length ? (
+                item.functional.map((fc: any) => (
+                  <Text key={fc.id} style={styles.rowSubtitle}>
+                    {fc.description}: {fc.value} {fc.unit}
+                  </Text>
+                ))
+              ) : (
+                <Text style={styles.helperText}>
+                  Нет функциональных характеристик.
+                </Text>
+              )}
+
+              <Text style={[styles.sectionTitle, { marginTop: 10 }]}>
+                Операционные (по стендам)
+              </Text>
+              {item.operational.length ? (
+                item.operational.map((oc: any) => (
+                  <Text key={oc.id} style={styles.rowSubtitle}>
+                    {oc.description ?? 'Параметр'}: {oc.value} {oc.unit} · Стенд:{' '}
+                    {oc.stand.nameOfStand} ({oc.stand.typeOfStand})
+                  </Text>
+                ))
+              ) : (
+                <Text style={styles.helperText}>
+                  Нет операционных характеристик.
+                </Text>
+              )}
             </View>
-          )}
-        />
+          ))}
+        </ScrollView>
       </ScreenWrapper>
     );
   }
 
   // ===================== СПУТНИКИ ===========================================
   if (entity === 'satellites') {
-    const { data, loading, error } = useQuery<any>(GET_SATELLITES);
-
     return (
-      <ScreenWrapper title="Спутники" loading={loading} error={error}>
+      <ScreenWrapper
+        title="Спутники"
+        loading={satellitesQuery.loading}
+        error={satellitesQuery.error}
+      >
         <FlatList
-          data={data?.satellites ?? []}
+          data={satellitesQuery.data?.satellites ?? []}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
@@ -162,39 +254,13 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
 
   // ===================== ЭЛЕКТРОНИКА ПО СПУТНИКУ ============================
   if (entity === 'electronics') {
-    const { data: satsData } = useQuery<any>(GET_SATELLITES);
-
-    const {
-      data,
-      loading,
-      error,
-      refetch: refetchElectronics,
-    } = useQuery<any>(GET_ELECTRONICS_BY_SATELLITE, {
-      variables: { satelliteId: selectedSatelliteId },
-      skip: !selectedSatelliteId,
-    });
-
-    const [deleteElectronics, { loading: deletingElectronics }] = useMutation(
-      DELETE_ELECTRONICS,
-      {
-        refetchQueries: selectedSatelliteId
-          ? [
-              {
-                query: GET_ELECTRONICS_BY_SATELLITE,
-                variables: { satelliteId: selectedSatelliteId },
-              },
-            ]
-          : [],
-      },
-    );
-
     const handleDeleteElectronics = async () => {
       if (!deleteElectronicsTarget) return;
       try {
         await deleteElectronics({
           variables: { id: deleteElectronicsTarget.id },
         });
-        await refetchElectronics();
+        await electronicsQuery.refetch();
       } catch (e: any) {
         Alert.alert('Ошибка', e?.message ?? 'Не удалось удалить электронику');
       } finally {
@@ -260,15 +326,15 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
       <>
         <ScreenWrapper
           title="Электроника по спутнику"
-          loading={loading && !!selectedSatelliteId}
-        error={error}
-      >
+          loading={electronicsQuery.loading && !!selectedSatelliteId}
+          error={electronicsQuery.error}
+        >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <Text style={styles.sectionTitle}>Выбери спутник:</Text>
           <FlatList
             horizontal
             showsHorizontalScrollIndicator={false}
-            data={satsData?.satellites ?? []}
+            data={satellitesQuery.data?.satellites ?? []}
             keyExtractor={(item) => String(item.id)}
             contentContainerStyle={styles.chipRow}
             renderItem={({ item }) => {
@@ -295,30 +361,30 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
             }}
           />
 
-          {selectedSatelliteId && data && (
+          {selectedSatelliteId && electronicsQuery.data && (
             <>
               <View style={styles.block}>
                 <Text style={styles.blockTitle}>Агрегирующие показатели</Text>
                 <Text style={styles.blockText}>
                   Суммарная стоимость:{' '}
-                  {data.electronicsTotalCost.toFixed(2)}
+                  {electronicsQuery.data.electronicsTotalCost.toFixed(2)}
                 </Text>
                 <Text style={styles.blockText}>
-                  Средняя стоимость: {data.electronicsAvgCost.toFixed(2)}
+                  Средняя стоимость: {electronicsQuery.data.electronicsAvgCost.toFixed(2)}
                 </Text>
                 <Text style={styles.blockText}>
-                  Минимум: {data.electronicsMinMaxCost.minCost?.toFixed(2)} (
-                  {data.electronicsMinMaxCost.minModel})
+                  Минимум: {electronicsQuery.data.electronicsMinMaxCost.minCost?.toFixed(2)} (
+                  {electronicsQuery.data.electronicsMinMaxCost.minModel})
                 </Text>
                 <Text style={styles.blockText}>
-                  Максимум: {data.electronicsMinMaxCost.maxCost?.toFixed(2)} (
-                  {data.electronicsMinMaxCost.maxModel})
+                  Максимум: {electronicsQuery.data.electronicsMinMaxCost.maxCost?.toFixed(2)} (
+                  {electronicsQuery.data.electronicsMinMaxCost.maxModel})
                 </Text>
               </View>
 
               <Text style={styles.sectionTitle}>Позиции электроники</Text>
               <View style={styles.listContent}>
-                {data.electronics.map((item: any) => (
+                {electronicsQuery.data.electronics.map((item: any) => (
                   <View key={item.id} style={styles.row}>
                     <Text style={styles.rowTitle}>{item.model}</Text>
                     <Text style={styles.rowSubtitle}>
@@ -492,26 +558,9 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
   );
 }
 
-// ===================== КАЛЕНДАРНЫЙ ПЛАН ====================================
-if (entity === 'calendarStats') {
-  const { data: satsData } = useQuery<any>(GET_SATELLITES);
-  const { data, loading, error, refetch } = useQuery<any>(GET_CALENDAR_STATS, {
-    variables: { satelliteId: selectedSatelliteId },
-    skip: !selectedSatelliteId,
-  });
-  const [deleteStage, { loading: deletingStage }] = useMutation(
-    DELETE_CALENDAR_STAGE,
-    {
-      refetchQueries: selectedSatelliteId
-        ? [
-            {
-              query: GET_CALENDAR_STATS,
-              variables: { satelliteId: selectedSatelliteId },
-            },
-          ]
-        : [],
-    },
-  );
+  // ===================== КАЛЕНДАРНЫЙ ПЛАН ====================================
+  if (entity === 'calendarStats') {
+    const refetch = calendarStatsQuery.refetch;
 
     const handleUpdateStage = async () => {
       if (!selectedSatelliteId) {
@@ -555,15 +604,15 @@ if (entity === 'calendarStats') {
     return (
       <ScreenWrapper
         title="Календарный план"
-        loading={loading && !!selectedSatelliteId}
-        error={error}
+        loading={calendarStatsQuery.loading && !!selectedSatelliteId}
+        error={calendarStatsQuery.error}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <Text style={styles.sectionTitle}>Выбери спутник:</Text>
           <FlatList
             horizontal
             showsHorizontalScrollIndicator={false}
-            data={satsData?.satellites ?? []}
+            data={satellitesQuery.data?.satellites ?? []}
             keyExtractor={(item) => String(item.id)}
             style={{ marginBottom: 12 }}
             contentContainerStyle={styles.chipRow}
@@ -591,28 +640,28 @@ if (entity === 'calendarStats') {
             }}
           />
 
-          {selectedSatelliteId && data && (
+          {selectedSatelliteId && calendarStatsQuery.data && (
             <>
               <View style={styles.block}>
                 <Text style={styles.blockTitle}>Время этапов</Text>
                 <Text style={styles.blockText}>
-                  Среднее: {data.calendarStageStats.avgDuration.toFixed(1)} дн
+                  Среднее: {calendarStatsQuery.data.calendarStageStats.avgDuration.toFixed(1)} дн
                 </Text>
                 <Text style={styles.blockText}>
-                  Максимум: {data.calendarStageStats.maxDuration.toFixed(1)} дн
+                  Максимум: {calendarStatsQuery.data.calendarStageStats.maxDuration.toFixed(1)} дн
                 </Text>
                 <Text style={styles.blockText}>
-                  Минимум: {data.calendarStageStats.minDuration.toFixed(1)} дн
+                  Минимум: {calendarStatsQuery.data.calendarStageStats.minDuration.toFixed(1)} дн
                 </Text>
                 <Text style={styles.blockText}>
                   Общая длительность спутника:{' '}
-                  {data.calendarStageStats.totalDuration.toFixed(1)} дн
+                  {calendarStatsQuery.data.calendarStageStats.totalDuration.toFixed(1)} дн
                 </Text>
               </View>
 
               <Text style={styles.sectionTitle}>Этапы</Text>
               <View style={styles.listContent}>
-                {data.calendarStages.map((item: any) => (
+                {calendarStatsQuery.data.calendarStages.map((item: any) => (
                   <View key={item.id} style={styles.row}>
                     <Text style={styles.rowTitle}>
                       {item.stageOrder}. {item.nameOfStage}
@@ -788,6 +837,158 @@ if (entity === 'calendarStats') {
             </View>
           </View>
         </Modal>
+      </ScreenWrapper>
+    );
+  }
+
+  // ===================== СТЕНДЫ, СЕНСОРЫ, ИСПЫТАНИЯ =========================
+  if (entity === 'standTests') {
+    const satellitesData = satellitesQuery.data;
+    const standsData = standsQuery.data;
+    const resourcesLoading = standResourcesQuery.loading;
+    const resourcesError = standResourcesQuery.error;
+    const standResources = standResourcesQuery.data;
+    const refetchStandResources = standResourcesQuery.refetch;
+
+    return (
+      <ScreenWrapper
+        title="Стенды, сенсоры и испытания"
+        loading={standsQuery.loading}
+        error={standsQuery.error}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <Text style={styles.sectionTitle}>Выбери спутник:</Text>
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={satellitesData?.satellites ?? []}
+            keyExtractor={(item) => String(item.id)}
+            contentContainerStyle={styles.chipRow}
+            renderItem={({ item }) => {
+              const active = standSatelliteId === String(item.id);
+              return (
+                <Pressable
+                  onPress={() => {
+                    const id = String(item.id);
+                    setStandSatelliteId(id);
+                    setSelectedStandId(null);
+                  }}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    active && { backgroundColor: colors.accentSoft },
+                    pressed && { opacity: 0.9 },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      active && { color: '#041013' },
+                    ]}
+                  >
+                    {item.name}
+                  </Text>
+                </Pressable>
+              );
+            }}
+          />
+
+          <Text style={styles.sectionTitle}>Выбери стенд:</Text>
+          <View style={styles.listContent}>
+            {(standsData?.stands ?? []).map((stand: any) => {
+              const active = selectedStandId === String(stand.id);
+              return (
+                <Pressable
+                  key={stand.id}
+                  onPress={() => {
+                    const id = String(stand.id);
+                    if (active) {
+                      setSelectedStandId(null);
+                      return;
+                    }
+                    setSelectedStandId(id);
+                    refetchStandResources({ standId: id });
+                  }}
+                  style={[
+                    styles.row,
+                    active && { borderColor: colors.accent, shadowOpacity: 0.16 },
+                  ]}
+                >
+                  <Text style={styles.rowTitle}>{stand.nameOfStand}</Text>
+                  <Text style={styles.rowSubtitle}>Тип: {stand.typeOfStand}</Text>
+                  <Text style={styles.rowSubtitle}>
+                    ID: {stand.id}{' '}
+                    {standSatelliteId && (
+                      <Text style={{ color: colors.textSecondary }}>
+                        · Спутник:{' '}
+                        {
+                          satellitesData?.satellites?.find(
+                            (s: any) => String(s.id) === standSatelliteId,
+                          )?.name
+                        }
+                      </Text>
+                    )}
+                  </Text>
+
+                  {active && (
+                    <View style={{ marginTop: 10 }}>
+                      {resourcesLoading && (
+                        <ActivityIndicator
+                          color={colors.accent}
+                          style={{ marginVertical: 8 }}
+                        />
+                      )}
+                      {resourcesError && (
+                        <Text style={styles.error}>
+                          Ошибка загрузки стенда: {String(resourcesError.message)}
+                        </Text>
+                      )}
+
+                      {!resourcesLoading && !resourcesError && standResources && (
+                        <>
+                          <Text style={styles.blockTitle}>Требования к оборудованию</Text>
+                          {standResources.hardwareRequirements?.length ? (
+                            standResources.hardwareRequirements.map((req: any) => (
+                              <Text key={req.id} style={styles.blockText}>
+                                • {req.value} {req.unit} (ID {req.id})
+                              </Text>
+                            ))
+                          ) : (
+                            <Text style={styles.helperText}>Нет требований.</Text>
+                          )}
+
+                          <Text style={[styles.blockTitle, { marginTop: 8 }]}>Сенсоры</Text>
+                          {standResources.sensors?.length ? (
+                            standResources.sensors.map((sensor: any) => (
+                              <Text key={sensor.id} style={styles.blockText}>
+                                • {sensor.description} @ {sensor.location} —{' '}
+                                {sensor.value ?? '—'} {sensor.unit ?? ''}
+                              </Text>
+                            ))
+                          ) : (
+                            <Text style={styles.helperText}>Нет сенсоров.</Text>
+                          )}
+
+                          <Text style={[styles.blockTitle, { marginTop: 8 }]}>
+                            Физические данные тестов
+                          </Text>
+                          {standResources.physicalTestData?.length ? (
+                            standResources.physicalTestData.map((p: any) => (
+                              <Text key={p.id} style={styles.blockText}>
+                                • {p.description}: {p.value} {p.unit}
+                              </Text>
+                            ))
+                          ) : (
+                            <Text style={styles.helperText}>Нет данных испытаний.</Text>
+                          )}
+                        </>
+                      )}
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+        </ScrollView>
       </ScreenWrapper>
     );
   }

@@ -346,13 +346,13 @@ export const resolvers = {
     ) => {
       const satId = Number(args.satelliteId);
       const rows = await prisma.$queryRaw<
-        Array<{
+        {
           id: number;
           nameOfStage: string;
           timeOfFrame: Date;
           duration: number;
           stageOrder: bigint | number;
-        }>
+        }[]
       >`
         SELECT
           id,
@@ -560,9 +560,7 @@ export const resolvers = {
           satelliteBodyId: satId,
         },
       });
-      const orderRow = await prisma.$queryRaw<
-        Array<{ rowNum: bigint | number }>
-      >`
+      const orderRow = await prisma.$queryRaw<{ rowNum: bigint | number }[]>`
         SELECT rowNum FROM (
           SELECT id, ROW_NUMBER() OVER (PARTITION BY technical_specification_satellite_body_id ORDER BY time_of_frame) as rowNum
           FROM calendar_plan
@@ -591,9 +589,7 @@ export const resolvers = {
           duration: args.duration,
         },
       });
-      const orderRow = await prisma.$queryRaw<
-        Array<{ rowNum: bigint | number }>
-      >`
+      const orderRow = await prisma.$queryRaw<{ rowNum: bigint | number }[]>`
         SELECT rowNum FROM (
           SELECT id, ROW_NUMBER() OVER (PARTITION BY technical_specification_satellite_body_id ORDER BY time_of_frame) as rowNum
           FROM calendar_plan

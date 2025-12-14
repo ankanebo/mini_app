@@ -26,18 +26,16 @@ type Section = {
 const buildSections = (role: Role): Section[] => {
   const base: Section[] = [
     {
-      title: 'Материалы и сырьё',
+      title: 'Материалы и стенды',
       actions: [
         {
-          label: 'Типы сырья (по массе, по возрастанию)',
-          entity: 'materials',
-          params: { sort: 'asc' },
+          label: 'Материалы и характеристики',
+          entity: 'materialsFull',
           target: 'EntityList',
         },
         {
-          label: 'Типы сырья (по массе, по убыванию)',
-          entity: 'materials',
-          params: { sort: 'desc' },
+          label: 'Стенды, сенсоры и испытания',
+          entity: 'standTests',
           target: 'EntityList',
         },
       ],

@@ -23,7 +23,6 @@ import {
     GET_ELECTRONICS_BY_SATELLITE,
     GET_SATELLITES,
     GET_TECH_SPECS_AND_OPCHAR,
-    UPDATE_CALENDAR_STAGE,
 } from '../graphql/queries';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors } from '../theme/colors';
@@ -162,7 +161,6 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
         : [],
     },
   );
-
 
   // ====== Handlers ======
 
@@ -373,6 +371,43 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
               <Text style={styles.blockText}>Нет характеристик.</Text>
             )}
           </View>
+          {isAdmin && (
+            <View style={styles.formBlock}>
+              <TextInput
+                style={styles.input}
+                placeholder="Название параметра"
+                placeholderTextColor={colors.textSecondary}
+                value={opParamName}
+                onChangeText={setOpParamName}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Значение"
+                placeholderTextColor={colors.textSecondary}
+                keyboardType="numeric"
+                value={opValue}
+                onChangeText={setOpValue}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Единица измерения"
+                placeholderTextColor={colors.textSecondary}
+                value={opUnit}
+                onChangeText={setOpUnit}
+              />
+              <Pressable
+                style={styles.button}
+                onPress={handleAddOpChar}
+                disabled={addingOpChar}
+              >
+                <Text style={styles.buttonText}>
+                  {addingOpChar
+                    ? 'Добавляем...'
+                    : 'Добавить характеристику'}
+                </Text>
+              </Pressable>
+            </View>
+          )}
 
           <View style={styles.block}>
             <Text style={styles.blockTitle}>Календарный план</Text>
@@ -407,6 +442,41 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
               <Text style={styles.blockText}>Этапы не заданы.</Text>
             )}
           </View>
+          {isAdmin && (
+            <View style={styles.formBlock}>
+              <TextInput
+                style={styles.input}
+                placeholder="Название этапа"
+                placeholderTextColor={colors.textSecondary}
+                value={stageName}
+                onChangeText={setStageName}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Дата (YYYY-MM-DD)"
+                placeholderTextColor={colors.textSecondary}
+                value={stageTime}
+                onChangeText={setStageTime}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Длительность, дн"
+                placeholderTextColor={colors.textSecondary}
+                keyboardType="numeric"
+                value={stageDuration}
+                onChangeText={setStageDuration}
+              />
+              <Pressable
+                style={styles.button}
+                onPress={handleAddStage}
+                disabled={addingStage}
+              >
+                <Text style={styles.buttonText}>
+                  {addingStage ? 'Добавляем...' : 'Добавить этап'}
+                </Text>
+              </Pressable>
+            </View>
+          )}
 
           <View style={styles.block}>
             <Text style={styles.blockTitle}>Электроника спутника</Text>
@@ -420,6 +490,50 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
               <Text style={styles.blockText}>Электроника не указана.</Text>
             )}
           </View>
+          {isAdmin && (
+            <View style={styles.formBlock}>
+              <TextInput
+                style={styles.input}
+                placeholder="Модель"
+                placeholderTextColor={colors.textSecondary}
+                value={elModel}
+                onChangeText={setElModel}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Тип"
+                placeholderTextColor={colors.textSecondary}
+                value={elType}
+                onChangeText={setElType}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Расположение (location)"
+                placeholderTextColor={colors.textSecondary}
+                value={elLocation}
+                onChangeText={setElLocation}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Цена"
+                placeholderTextColor={colors.textSecondary}
+                keyboardType="numeric"
+                value={elPrice}
+                onChangeText={setElPrice}
+              />
+              <Pressable
+                style={styles.button}
+                onPress={handleAddElectronics}
+                disabled={addingElectronics}
+              >
+                <Text style={styles.buttonText}>
+                  {addingElectronics
+                    ? 'Добавляем...'
+                    : 'Добавить электронику'}
+                </Text>
+              </Pressable>
+            </View>
+          )}
         </>
       )}
 
@@ -452,133 +566,10 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
               </Text>
             </Pressable>
           </View>
-
-          <Text style={styles.sectionTitle}>
-            Добавить электронику к выбранному спутнику
-          </Text>
-          <View style={styles.formBlock}>
-            <TextInput
-              style={styles.input}
-              placeholder="Модель"
-              placeholderTextColor={colors.textSecondary}
-              value={elModel}
-              onChangeText={setElModel}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Тип"
-              placeholderTextColor={colors.textSecondary}
-              value={elType}
-              onChangeText={setElType}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Расположение (location)"
-              placeholderTextColor={colors.textSecondary}
-              value={elLocation}
-              onChangeText={setElLocation}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Цена"
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="numeric"
-              value={elPrice}
-              onChangeText={setElPrice}
-            />
-            <Pressable
-              style={styles.button}
-              onPress={handleAddElectronics}
-              disabled={addingElectronics}
-            >
-              <Text style={styles.buttonText}>
-                {addingElectronics
-                  ? 'Добавляем...'
-                  : 'Добавить электронику'}
-              </Text>
-            </Pressable>
-          </View>
-
-          <Text style={styles.sectionTitle}>
-            Добавить операционную характеристику спутника
-          </Text>
-          <View style={styles.formBlock}>
-            <TextInput
-              style={styles.input}
-              placeholder="Название параметра"
-              placeholderTextColor={colors.textSecondary}
-              value={opParamName}
-              onChangeText={setOpParamName}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Значение"
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="numeric"
-              value={opValue}
-              onChangeText={setOpValue}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Единица измерения"
-              placeholderTextColor={colors.textSecondary}
-              value={opUnit}
-              onChangeText={setOpUnit}
-            />
-            <Pressable
-              style={styles.button}
-              onPress={handleAddOpChar}
-              disabled={addingOpChar}
-            >
-              <Text style={styles.buttonText}>
-                {addingOpChar
-                  ? 'Добавляем...'
-                  : 'Добавить характеристику'}
-              </Text>
-            </Pressable>
-          </View>
-
-            <Text style={styles.sectionTitle}>
-              Добавить этап в календарный план
-            </Text>
-            <View style={styles.formBlock}>
-              <TextInput
-                style={styles.input}
-                placeholder="Название этапа"
-                placeholderTextColor={colors.textSecondary}
-                value={stageName}
-                onChangeText={setStageName}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Дата (YYYY-MM-DD)"
-                placeholderTextColor={colors.textSecondary}
-                value={stageTime}
-                onChangeText={setStageTime}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Длительность, дн"
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="numeric"
-                value={stageDuration}
-                onChangeText={setStageDuration}
-              />
-            <Pressable
-              style={styles.button}
-              onPress={handleAddStage}
-              disabled={addingStage}
-            >
-              <Text style={styles.buttonText}>
-                {addingStage ? 'Добавляем...' : 'Добавить этап'}
-              </Text>
-            </Pressable>
-          </View>
-
         </>
       )}
       </ScrollView>
-      <View pointerEvents="none" style={styles.glow} />
+      <View style={[styles.glow, { pointerEvents: 'none' }]} />
     </LinearGradient>
   );
 };

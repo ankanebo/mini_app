@@ -12,6 +12,36 @@ export const GET_MATERIALS = gql`
   }
 `;
 
+export const GET_MATERIALS_FULL = gql`
+  query MaterialsFull($orderByAmount: SortOrder) {
+    materialsFull(orderByAmount: $orderByAmount) {
+      material {
+        id
+        typeOfMaterial
+        amount
+        unit
+      }
+      functional {
+        id
+        unit
+        value
+        description
+      }
+      operational {
+        id
+        unit
+        value
+        description
+        stand {
+          id
+          nameOfStand
+          typeOfStand
+        }
+      }
+    }
+  }
+`;
+
 export const GET_SATELLITES = gql`
   query Satellites {
     satellites {
@@ -56,6 +86,39 @@ export const GET_CALENDAR_STATS = gql`
       timeOfFrame
       duration
       stageOrder
+    }
+  }
+`;
+
+export const GET_STANDS = gql`
+  query Stands($satelliteId: ID) {
+    stands(satelliteId: $satelliteId) {
+      id
+      nameOfStand
+      typeOfStand
+    }
+  }
+`;
+
+export const GET_STAND_RESOURCES = gql`
+  query StandResources($standId: ID!) {
+    sensors(standId: $standId) {
+      id
+      location
+      value
+      unit
+      description
+    }
+    hardwareRequirements(standId: $standId) {
+      id
+      unit
+      value
+    }
+    physicalTestData(standId: $standId) {
+      id
+      value
+      unit
+      description
     }
   }
 `;

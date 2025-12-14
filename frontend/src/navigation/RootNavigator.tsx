@@ -16,7 +16,12 @@ export type RootStackParamList = {
   Home: { role: Role };
   EntityList: {
     role: Role;
-    entity: 'materials' | 'satellites' | 'electronics' | 'calendarStats';
+    entity:
+      | 'materialsFull'
+      | 'satellites'
+      | 'electronics'
+      | 'calendarStats'
+      | 'standTests';
     satelliteId?: string;
     sort?: 'asc' | 'desc';
   };
