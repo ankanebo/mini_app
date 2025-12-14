@@ -22,6 +22,7 @@ import {
     GET_ELECTRONICS_BY_SATELLITE,
     GET_SATELLITES,
     GET_TECH_SPECS_AND_OPCHAR,
+    UPDATE_CALENDAR_STAGE,
 } from '../graphql/queries';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { colors } from '../theme/colors';
@@ -50,6 +51,10 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
   const [stageName, setStageName] = useState('');
   const [stageTime, setStageTime] = useState('');
   const [stageDuration, setStageDuration] = useState('');
+  const [editStageId, setEditStageId] = useState('');
+  const [editStageName, setEditStageName] = useState('');
+  const [editStageTime, setEditStageTime] = useState('');
+  const [editStageDuration, setEditStageDuration] = useState('');
 
   const isAdmin = role === 'admin';
 
@@ -127,6 +132,20 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
 
   const [addStage, { loading: addingStage }] = useMutation(
     ADD_CALENDAR_STAGE,
+    {
+      refetchQueries: selectedSatelliteId
+        ? [
+            {
+              query: GET_CALENDAR_STATS,
+              variables: { satelliteId: selectedSatelliteId },
+            },
+          ]
+        : [],
+    },
+  );
+
+  const [updateStage, { loading: updatingStage }] = useMutation(
+    UPDATE_CALENDAR_STAGE,
     {
       refetchQueries: selectedSatelliteId
         ? [
@@ -259,6 +278,43 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
     }
   };
 
+  const handleUpdateStage = async () => {
+    if (!selectedSatelliteId) {
+      Alert.alert('Ошибка', 'Сначала выбери спутник.');
+      return;
+    }
+    if (!editStageId.trim()) {
+      Alert.alert('Ошибка', 'Укажи ID этапа для обновления.');
+      return;
+    }
+    if (!editStageName.trim() || !editStageTime.trim()) {
+      Alert.alert('Ошибка', 'Заполни название этапа и дату/время.');
+      return;
+    }
+    const durationNum = Number(editStageDuration);
+    if (!Number.isFinite(durationNum) || durationNum <= 0) {
+      Alert.alert('Ошибка', 'Длительность должна быть положительным числом.');
+      return;
+    }
+    try {
+      await updateStage({
+        variables: {
+          id: editStageId.trim(),
+          nameOfStage: editStageName.trim(),
+          timeOfFrame: editStageTime.trim(),
+          duration: Math.round(durationNum),
+        },
+      });
+      setEditStageId('');
+      setEditStageName('');
+      setEditStageTime('');
+      setEditStageDuration('');
+      Alert.alert('Готово', 'Этап обновлен.');
+    } catch (e: any) {
+      Alert.alert('Ошибка', e.message ?? 'Не удалось обновить этап');
+    }
+  };
+
   const anyLoading =
     satellitesLoading ||
     techLoading ||
@@ -373,7 +429,7 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
             {calendarData?.calendarStages?.length ? (
               calendarData.calendarStages.map((st: any) => (
                 <Text key={st.id} style={styles.blockText}>
-                  • {st.nameOfStage} – {st.duration} ч (
+                  {st.stageOrder}. {st.nameOfStage} – {st.duration} ч (
                   {new Date(st.timeOfFrame).toLocaleString()})
                 </Text>
               ))
@@ -545,6 +601,50 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
             >
               <Text style={styles.buttonText}>
                 {addingStage ? 'Добавляем...' : 'Добавить этап'}
+              </Text>
+            </Pressable>
+          </View>
+
+          <Text style={styles.sectionTitle}>
+            Обновить этап календарного плана
+          </Text>
+          <View style={styles.formBlock}>
+            <TextInput
+              style={styles.input}
+              placeholder="ID этапа"
+              placeholderTextColor={colors.textSecondary}
+              value={editStageId}
+              onChangeText={setEditStageId}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Новое название этапа"
+              placeholderTextColor={colors.textSecondary}
+              value={editStageName}
+              onChangeText={setEditStageName}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Новая дата/время (ISO)"
+              placeholderTextColor={colors.textSecondary}
+              value={editStageTime}
+              onChangeText={setEditStageTime}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Новая длительность, ч"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="numeric"
+              value={editStageDuration}
+              onChangeText={setEditStageDuration}
+            />
+            <Pressable
+              style={styles.button}
+              onPress={handleUpdateStage}
+              disabled={updatingStage}
+            >
+              <Text style={styles.buttonText}>
+                {updatingStage ? 'Обновляем...' : 'Обновить этап'}
               </Text>
             </Pressable>
           </View>

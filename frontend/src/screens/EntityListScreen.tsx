@@ -361,7 +361,9 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
               keyExtractor={(item) => String(item.id)}
               renderItem={({ item }) => (
                 <View style={styles.row}>
-                  <Text style={styles.rowTitle}>{item.nameOfStage}</Text>
+                  <Text style={styles.rowTitle}>
+                    {item.stageOrder}. {item.nameOfStage}
+                  </Text>
                   <Text style={styles.rowSubtitle}>
                     Длительность: {item.duration} ч
                   </Text>

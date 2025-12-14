@@ -55,6 +55,7 @@ export const GET_CALENDAR_STATS = gql`
       nameOfStage
       timeOfFrame
       duration
+      stageOrder
     }
   }
 `;
@@ -139,14 +140,36 @@ export const ADD_CALENDAR_STAGE = gql`
     $nameOfStage: String!
     $timeOfFrame: String!
     $duration: Int!
+    ) {
+      addCalendarStage(
+        satelliteId: $satelliteId
+        nameOfStage: $nameOfStage
+        timeOfFrame: $timeOfFrame
+        duration: $duration
+      ) {
+        id
+      }
+    }
+`;
+
+export const UPDATE_CALENDAR_STAGE = gql`
+  mutation UpdateCalendarStage(
+    $id: ID!
+    $nameOfStage: String!
+    $timeOfFrame: String!
+    $duration: Int!
   ) {
-    addCalendarStage(
-      satelliteId: $satelliteId
+    updateCalendarStage(
+      id: $id
       nameOfStage: $nameOfStage
       timeOfFrame: $timeOfFrame
       duration: $duration
     ) {
       id
+      nameOfStage
+      timeOfFrame
+      duration
+      stageOrder
     }
   }
 `;

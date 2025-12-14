@@ -89,6 +89,7 @@ export const typeDefs = gql`
     nameOfStage: String!
     timeOfFrame: String!
     duration: Int!
+    stageOrder: Int!
   }
 
   type ElectronicsMinMax {
@@ -180,6 +181,12 @@ export const typeDefs = gql`
     # Админ: календарный план
     addCalendarStage(
       satelliteId: ID!
+      nameOfStage: String!
+      timeOfFrame: String!
+      duration: Int!
+    ): CalendarStage!
+    updateCalendarStage(
+      id: ID!
       nameOfStage: String!
       timeOfFrame: String!
       duration: Int!
@@ -332,14 +339,40 @@ export const resolvers = {
       };
     },
 
-    calendarStages: (
+    calendarStages: async (
       _: any,
       args: { satelliteId: string },
       { prisma }: Context
-    ) =>
-      prisma.calendarPlan.findMany({
-        where: { satelliteBodyId: Number(args.satelliteId) },
-      }),
+    ) => {
+      const satId = Number(args.satelliteId);
+      const rows = await prisma.$queryRaw<
+        Array<{
+          id: number;
+          nameOfStage: string;
+          timeOfFrame: Date;
+          duration: number;
+          stageOrder: bigint | number;
+        }>
+      >`
+        SELECT
+          id,
+          name_of_stage AS nameOfStage,
+          time_of_frame AS timeOfFrame,
+          length AS duration,
+          ROW_NUMBER() OVER (PARTITION BY technical_specification_satellite_body_id ORDER BY time_of_frame) AS stageOrder
+        FROM calendar_plan
+        WHERE technical_specification_satellite_body_id = ${satId}
+        ORDER BY time_of_frame;
+      `;
+
+      return rows.map((row) => ({
+        id: row.id,
+        nameOfStage: row.nameOfStage,
+        timeOfFrame: row.timeOfFrame,
+        duration: row.duration,
+        stageOrder: Number(row.stageOrder),
+      }));
+    },
 
     calendarStageStats: async (
       _: any,
@@ -518,7 +551,7 @@ export const resolvers = {
       if (!techSpec) {
         throw new Error('Для этого спутника нет technical_specification');
       }
-      return prisma.calendarPlan.create({
+      const created = await prisma.calendarPlan.create({
         data: {
           nameOfStage: args.nameOfStage,
           timeOfFrame: new Date(args.timeOfFrame),
@@ -527,6 +560,48 @@ export const resolvers = {
           satelliteBodyId: satId,
         },
       });
+      const orderRow = await prisma.$queryRaw<
+        Array<{ rowNum: bigint | number }>
+      >`
+        SELECT rowNum FROM (
+          SELECT id, ROW_NUMBER() OVER (PARTITION BY technical_specification_satellite_body_id ORDER BY time_of_frame) as rowNum
+          FROM calendar_plan
+          WHERE technical_specification_satellite_body_id = ${satId}
+        ) ranked WHERE id = ${created.id}
+      `;
+      const stageOrder = orderRow[0]?.rowNum ?? 1;
+      return { ...created, stageOrder: Number(stageOrder) };
+    },
+
+    updateCalendarStage: async (
+      _: any,
+      args: {
+        id: string;
+        nameOfStage: string;
+        timeOfFrame: string;
+        duration: number;
+      },
+      { prisma }: Context
+    ) => {
+      const updated = await prisma.calendarPlan.update({
+        where: { id: Number(args.id) },
+        data: {
+          nameOfStage: args.nameOfStage,
+          timeOfFrame: new Date(args.timeOfFrame),
+          duration: args.duration,
+        },
+      });
+      const orderRow = await prisma.$queryRaw<
+        Array<{ rowNum: bigint | number }>
+      >`
+        SELECT rowNum FROM (
+          SELECT id, ROW_NUMBER() OVER (PARTITION BY technical_specification_satellite_body_id ORDER BY time_of_frame) as rowNum
+          FROM calendar_plan
+          WHERE technical_specification_satellite_body_id = ${updated.satelliteBodyId}
+        ) ranked WHERE id = ${updated.id}
+      `;
+      const stageOrder = orderRow[0]?.rowNum ?? 1;
+      return { ...updated, stageOrder: Number(stageOrder) };
     },
 
     deleteCalendarStage: async (
