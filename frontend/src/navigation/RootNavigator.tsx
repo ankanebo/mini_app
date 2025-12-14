@@ -7,6 +7,7 @@ import EntityListScreen from '../screens/EntityListScreen';
 import HomeScreen from '../screens/HomeScreen';
 import RoleSelectScreen from '../screens/RoleSelectScreen';
 import SatelliteAdminScreen from '../screens/SatelliteAdminScreen';
+import { colors } from '../theme/colors';
 
 export type Role = 'manager' | 'engineer' | 'admin';
 
@@ -32,8 +33,10 @@ export default function RootNavigator() {
       <Stack.Navigator
         initialRouteName="RoleSelect"
         screenOptions={{
-          headerStyle: { backgroundColor: '#020617' },
-          headerTintColor: '#e5e7eb',
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.textPrimary,
+          headerTitleStyle: { letterSpacing: 0.4, fontWeight: '700' },
+          contentStyle: { backgroundColor: 'transparent' },
         }}
       >
         <Stack.Screen

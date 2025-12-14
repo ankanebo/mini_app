@@ -1,5 +1,6 @@
 // frontend/src/screens/HomeScreen.tsx
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -101,19 +102,27 @@ const HomeScreen: React.FC<Props> = ({ route, navigation }) => {
   const sections = buildSections(role);
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={[colors.gradientFrom, colors.gradientMid, colors.gradientTo]}
+      style={styles.container}
+    >
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>
-          {role === 'admin'
-            ? 'Администратор'
-            : role === 'engineer'
-            ? 'Инженер'
-            : 'Руководитель'}
-        </Text>
-        <Text style={styles.subtitle}>
-          Выбери действие. Для администратора доступно управление спутниками и
-          этапами.
-        </Text>
+        <View style={styles.header}>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleText}>
+              {role === 'admin'
+                ? 'Администратор'
+                : role === 'engineer'
+                ? 'Инженер'
+                : 'Руководитель'}
+            </Text>
+          </View>
+          <Text style={styles.title}>Рабочая панель</Text>
+          <Text style={styles.subtitle}>
+            Обновлённый интерфейс с яркими акцентами и стеклянными карточками.
+            Выбери действие: списки, отчёты или администрирование.
+          </Text>
+        </View>
 
         {sections.map((section) => (
           <View key={section.title} style={styles.section}>
@@ -139,38 +148,81 @@ const HomeScreen: React.FC<Props> = ({ route, navigation }) => {
           </View>
         ))}
       </ScrollView>
-    </View>
+      <View pointerEvents="none" style={styles.glow} />
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   scroll: {
-    padding: 20,
+    padding: 22,
     paddingBottom: 40,
+  },
+  header: {
+    marginBottom: 18,
+  },
+  roleBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 8,
+  },
+  roleText: {
+    color: colors.accent,
+    fontWeight: '700',
+    letterSpacing: 0.6,
   },
   title: {
     color: colors.textPrimary,
-    fontSize: 22,
-    fontWeight: '700',
-    marginBottom: 6,
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 8,
+    letterSpacing: 0.3,
   },
   subtitle: {
     color: colors.textSecondary,
-    fontSize: 14,
+    fontSize: 15,
     marginBottom: 20,
+    lineHeight: 20,
   },
   section: {
     marginBottom: 20,
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    shadowColor: colors.accent,
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 12 },
   },
   sectionTitle: {
     color: colors.textPrimary,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 8,
+    letterSpacing: 0.2,
+  },
+  glow: {
+    position: 'absolute',
+    left: -80,
+    bottom: -120,
+    width: 280,
+    height: 280,
+    backgroundColor: colors.glow,
+    opacity: 0.45,
+    borderRadius: 999,
+    shadowColor: colors.accentSoft,
+    shadowOpacity: 0.5,
+    shadowRadius: 36,
   },
 });
 

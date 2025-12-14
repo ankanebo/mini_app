@@ -1,4 +1,5 @@
 // frontend/src/screens/SatelliteAdminScreen.tsx
+import { LinearGradient } from 'expo-linear-gradient';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
@@ -51,12 +52,30 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
   const [stageName, setStageName] = useState('');
   const [stageTime, setStageTime] = useState('');
   const [stageDuration, setStageDuration] = useState('');
-  const [editStageId, setEditStageId] = useState('');
-  const [editStageName, setEditStageName] = useState('');
-  const [editStageTime, setEditStageTime] = useState('');
-  const [editStageDuration, setEditStageDuration] = useState('');
 
   const isAdmin = role === 'admin';
+
+  const formatDate = (value: any) => {
+    if (value === null || value === undefined) return '—';
+    const raw = typeof value === 'string' ? value.trim() : value;
+    let date: Date | null = null;
+
+    if (typeof raw === 'number' || typeof raw === 'bigint') {
+      date = new Date(Number(raw));
+    } else if (typeof raw === 'string') {
+      if (/^\d+$/.test(raw)) {
+        date = new Date(Number(raw));
+      } else {
+        date = new Date(raw);
+      }
+    }
+
+    if (!date || Number.isNaN(date.getTime())) {
+      return typeof raw === 'string' && raw ? raw : '—';
+    }
+
+    return date.toISOString().split('T')[0];
+  };
 
   // ====== Квери ======
 
@@ -144,19 +163,6 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
     },
   );
 
-  const [updateStage, { loading: updatingStage }] = useMutation(
-    UPDATE_CALENDAR_STAGE,
-    {
-      refetchQueries: selectedSatelliteId
-        ? [
-            {
-              query: GET_CALENDAR_STATS,
-              variables: { satelliteId: selectedSatelliteId },
-            },
-          ]
-        : [],
-    },
-  );
 
   // ====== Handlers ======
 
@@ -255,8 +261,8 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
       Alert.alert('Ошибка', 'Заполни название этапа и дату/время.');
       return;
     }
-    const durationNum = Number(stageDuration);
-    if (!Number.isFinite(durationNum) || durationNum <= 0) {
+    const durationDays = Number(stageDuration);
+    if (!Number.isFinite(durationDays) || durationDays <= 0) {
       Alert.alert('Ошибка', 'Длительность должна быть положительным числом.');
       return;
     }
@@ -266,7 +272,7 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
           satelliteId: selectedSatelliteId,
           nameOfStage: stageName.trim(),
           timeOfFrame: stageTime.trim(), // ISO-строка, как в других местах
-          duration: Math.round(durationNum),
+          duration: Math.round(durationDays), // храним в днях
         },
       });
       setStageName('');
@@ -278,42 +284,6 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
     }
   };
 
-  const handleUpdateStage = async () => {
-    if (!selectedSatelliteId) {
-      Alert.alert('Ошибка', 'Сначала выбери спутник.');
-      return;
-    }
-    if (!editStageId.trim()) {
-      Alert.alert('Ошибка', 'Укажи ID этапа для обновления.');
-      return;
-    }
-    if (!editStageName.trim() || !editStageTime.trim()) {
-      Alert.alert('Ошибка', 'Заполни название этапа и дату/время.');
-      return;
-    }
-    const durationNum = Number(editStageDuration);
-    if (!Number.isFinite(durationNum) || durationNum <= 0) {
-      Alert.alert('Ошибка', 'Длительность должна быть положительным числом.');
-      return;
-    }
-    try {
-      await updateStage({
-        variables: {
-          id: editStageId.trim(),
-          nameOfStage: editStageName.trim(),
-          timeOfFrame: editStageTime.trim(),
-          duration: Math.round(durationNum),
-        },
-      });
-      setEditStageId('');
-      setEditStageName('');
-      setEditStageTime('');
-      setEditStageDuration('');
-      Alert.alert('Готово', 'Этап обновлен.');
-    } catch (e: any) {
-      Alert.alert('Ошибка', e.message ?? 'Не удалось обновить этап');
-    }
-  };
 
   const anyLoading =
     satellitesLoading ||
@@ -324,8 +294,12 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
   const anyError = satellitesError || techError || calendarError || electronicsError;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Управление спутниками</Text>
+    <LinearGradient
+      colors={[colors.gradientFrom, colors.gradientMid, colors.gradientTo]}
+      style={styles.container}
+    >
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Управление спутниками</Text>
 
       {anyLoading && (
         <ActivityIndicator
@@ -341,35 +315,31 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
       )}
 
       {/* Выбор спутника */}
-      <Text style={styles.sectionTitle}>Выбери спутник:</Text>
-      <ScrollView
-        horizontal
-        style={{ marginBottom: 12 }}
-        showsHorizontalScrollIndicator={false}
-      >
-        {satellitesData?.satellites?.map((sat: any) => {
-          const active = selectedSatelliteId === sat.id;
-          return (
-            <Pressable
-              key={sat.id}
-              onPress={() => setSelectedSatelliteId(sat.id)}
-              style={[
-                styles.chip,
-                active && { backgroundColor: colors.accentSoft },
-              ]}
-            >
-              <Text
+        <Text style={styles.sectionTitle}>Выбери спутник:</Text>
+        <View style={styles.chipsWrap}>
+          {satellitesData?.satellites?.map((sat: any) => {
+            const active = selectedSatelliteId === sat.id;
+            return (
+              <Pressable
+                key={sat.id}
+                onPress={() => setSelectedSatelliteId(sat.id)}
                 style={[
-                  styles.chipText,
-                  active && { color: '#0b1120' },
+                  styles.chip,
+                  active && { backgroundColor: colors.accentSoft },
                 ]}
               >
-                {sat.name}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+                <Text
+                  style={[
+                    styles.chipText,
+                    active && { color: '#041013' },
+                  ]}
+                >
+                  {sat.name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
 
       {/* Информация о спутнике */}
       {selectedSatelliteId && (
@@ -410,29 +380,29 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
               <>
                 <Text style={styles.blockText}>
                   Средняя длительность:{' '}
-                  {calendarData.calendarStageStats.avgDuration.toFixed(1)} ч
+                  {calendarData.calendarStageStats.avgDuration.toFixed(1)} дн
                 </Text>
                 <Text style={styles.blockText}>
                   Максимум:{' '}
-                  {calendarData.calendarStageStats.maxDuration.toFixed(1)} ч
+                  {calendarData.calendarStageStats.maxDuration.toFixed(1)} дн
                 </Text>
                 <Text style={styles.blockText}>
                   Минимум:{' '}
-                  {calendarData.calendarStageStats.minDuration.toFixed(1)} ч
+                  {calendarData.calendarStageStats.minDuration.toFixed(1)} дн
                 </Text>
                 <Text style={styles.blockText}>
                   Общая длительность:{' '}
-                  {calendarData.calendarStageStats.totalDuration.toFixed(1)} ч
+                  {calendarData.calendarStageStats.totalDuration.toFixed(1)} дн
                 </Text>
               </>
             )}
-            {calendarData?.calendarStages?.length ? (
-              calendarData.calendarStages.map((st: any) => (
-                <Text key={st.id} style={styles.blockText}>
-                  {st.stageOrder}. {st.nameOfStage} – {st.duration} ч (
-                  {new Date(st.timeOfFrame).toLocaleString()})
-                </Text>
-              ))
+              {calendarData?.calendarStages?.length ? (
+                calendarData.calendarStages.map((st: any) => (
+                  <Text key={st.id} style={styles.blockText}>
+                    {st.stageOrder}. {st.nameOfStage} – {st.duration.toFixed(1)} дн (
+                    {formatDate(st.timeOfFrame)})
+                  </Text>
+                ))
             ) : (
               <Text style={styles.blockText}>Этапы не заданы.</Text>
             )}
@@ -568,32 +538,32 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
             </Pressable>
           </View>
 
-          <Text style={styles.sectionTitle}>
-            Добавить этап в календарный план
-          </Text>
-          <View style={styles.formBlock}>
-            <TextInput
-              style={styles.input}
-              placeholder="Название этапа"
-              placeholderTextColor={colors.textSecondary}
-              value={stageName}
-              onChangeText={setStageName}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Дата/время (ISO, напр. 2025-12-13T10:00:00)"
-              placeholderTextColor={colors.textSecondary}
-              value={stageTime}
-              onChangeText={setStageTime}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Длительность, ч"
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="numeric"
-              value={stageDuration}
-              onChangeText={setStageDuration}
-            />
+            <Text style={styles.sectionTitle}>
+              Добавить этап в календарный план
+            </Text>
+            <View style={styles.formBlock}>
+              <TextInput
+                style={styles.input}
+                placeholder="Название этапа"
+                placeholderTextColor={colors.textSecondary}
+                value={stageName}
+                onChangeText={setStageName}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Дата (YYYY-MM-DD)"
+                placeholderTextColor={colors.textSecondary}
+                value={stageTime}
+                onChangeText={setStageTime}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Длительность, дн"
+                placeholderTextColor={colors.textSecondary}
+                keyboardType="numeric"
+                value={stageDuration}
+                onChangeText={setStageDuration}
+              />
             <Pressable
               style={styles.button}
               onPress={handleAddStage}
@@ -605,80 +575,44 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
             </Pressable>
           </View>
 
-          <Text style={styles.sectionTitle}>
-            Обновить этап календарного плана
-          </Text>
-          <View style={styles.formBlock}>
-            <TextInput
-              style={styles.input}
-              placeholder="ID этапа"
-              placeholderTextColor={colors.textSecondary}
-              value={editStageId}
-              onChangeText={setEditStageId}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Новое название этапа"
-              placeholderTextColor={colors.textSecondary}
-              value={editStageName}
-              onChangeText={setEditStageName}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Новая дата/время (ISO)"
-              placeholderTextColor={colors.textSecondary}
-              value={editStageTime}
-              onChangeText={setEditStageTime}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Новая длительность, ч"
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="numeric"
-              value={editStageDuration}
-              onChangeText={setEditStageDuration}
-            />
-            <Pressable
-              style={styles.button}
-              onPress={handleUpdateStage}
-              disabled={updatingStage}
-            >
-              <Text style={styles.buttonText}>
-                {updatingStage ? 'Обновляем...' : 'Обновить этап'}
-              </Text>
-            </Pressable>
-          </View>
         </>
       )}
-    </ScrollView>
+      </ScrollView>
+      <View pointerEvents="none" style={styles.glow} />
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    position: 'relative',
   },
   content: {
-    padding: 16,
+    padding: 18,
     paddingBottom: 32,
   },
   title: {
     color: colors.textPrimary,
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     marginBottom: 12,
+    letterSpacing: 0.3,
   },
   sectionTitle: {
     color: colors.textPrimary,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     marginTop: 16,
     marginBottom: 8,
+    letterSpacing: 0.2,
   },
   error: {
     color: colors.danger,
     marginBottom: 8,
+    backgroundColor: 'rgba(255,107,107,0.08)',
+    padding: 10,
+    borderRadius: 10,
   },
   chip: {
     paddingHorizontal: 12,
@@ -687,35 +621,50 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     marginRight: 8,
+    backgroundColor: colors.card,
   },
   chipText: {
     color: colors.textPrimary,
     fontSize: 13,
   },
-  block: {
-    backgroundColor: colors.card,
-    padding: 12,
-    borderRadius: 12,
+  chipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     marginBottom: 12,
+    paddingRight: 6,
+  },
+  block: {
+    backgroundColor: colors.cardStrong,
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 14,
     borderWidth: 1,
     borderColor: colors.border,
+    shadowColor: colors.accent,
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
   },
   blockTitle: {
     color: colors.textPrimary,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 4,
+    letterSpacing: 0.2,
   },
   blockText: {
     color: colors.textSecondary,
     fontSize: 13,
+    lineHeight: 18,
   },
   formBlock: {
     backgroundColor: colors.card,
-    padding: 12,
-    borderRadius: 12,
+    padding: 14,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    marginBottom: 12,
+    marginBottom: 14,
+    shadowColor: colors.accent,
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
   },
   input: {
     borderWidth: 1,
@@ -726,6 +675,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: 8,
     fontSize: 13,
+    backgroundColor: 'rgba(255,255,255,0.04)',
   },
   button: {
     backgroundColor: colors.accent,
@@ -733,10 +683,26 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 4,
+    shadowColor: colors.accent,
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
   },
   buttonText: {
-    color: '#0b1120',
-    fontWeight: '600',
+    color: '#041013',
+    fontWeight: '700',
+  },
+  glow: {
+    position: 'absolute',
+    left: -80,
+    top: 60,
+    width: 240,
+    height: 240,
+    backgroundColor: colors.glow,
+    opacity: 0.5,
+    borderRadius: 999,
+    shadowColor: colors.accent,
+    shadowOpacity: 0.35,
+    shadowRadius: 28,
   },
 });
 

@@ -173,3 +173,15 @@ export const UPDATE_CALENDAR_STAGE = gql`
     }
   }
 `;
+
+export const DELETE_CALENDAR_STAGE = gql`
+  mutation DeleteCalendarStage($id: ID!) {
+    deleteCalendarStage(id: $id)
+  }
+`;
+
+export const DELETE_ELECTRONICS = gql`
+  mutation DeleteElectronics($id: ID!) {
+    deleteElectronics(id: $id)
+  }
+`;
