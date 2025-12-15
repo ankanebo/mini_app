@@ -52,6 +52,16 @@ export const GET_SATELLITES = gql`
   }
 `;
 
+export const UPDATE_SATELLITE = gql`
+  mutation UpdateSatellite($id: ID!, $name: String!, $type: String!) {
+    updateSatellite(id: $id, name: $name, type: $type) {
+      id
+      name
+      type
+    }
+  }
+`;
+
 export const GET_ELECTRONICS_BY_SATELLITE = gql`
   query Electronics($satelliteId: ID!) {
     electronics(satelliteId: $satelliteId) {
@@ -96,6 +106,7 @@ export const GET_STANDS = gql`
       id
       nameOfStand
       typeOfStand
+      satelliteBodyId
     }
   }
 `;
@@ -197,6 +208,33 @@ export const ADD_SATELLITE_OPCHAR = gql`
   }
 `;
 
+export const UPDATE_SATELLITE_OPCHAR = gql`
+  mutation UpdateSatelliteOpCharacteristic(
+    $id: ID!
+    $parameterName: String!
+    $value: Float!
+    $unit: String!
+  ) {
+    updateSatelliteOpCharacteristic(
+      id: $id
+      parameterName: $parameterName
+      value: $value
+      unit: $unit
+    ) {
+      id
+      parameterName
+      value
+      unit
+    }
+  }
+`;
+
+export const DELETE_SATELLITE_OPCHAR = gql`
+  mutation DeleteSatelliteOpCharacteristic($id: ID!) {
+    deleteSatelliteOpCharacteristic(id: $id)
+  }
+`;
+
 export const ADD_CALENDAR_STAGE = gql`
   mutation AddCalendarStage(
     $satelliteId: ID!
@@ -246,5 +284,281 @@ export const DELETE_CALENDAR_STAGE = gql`
 export const DELETE_ELECTRONICS = gql`
   mutation DeleteElectronics($id: ID!) {
     deleteElectronics(id: $id)
+  }
+`;
+
+export const UPDATE_FUNCTIONAL_CHAR = gql`
+  mutation UpdateFunctionalCharacteristicOfMaterial(
+    $id: ID!
+    $description: String!
+    $value: Float!
+    $unit: String!
+  ) {
+    updateFunctionalCharacteristicOfMaterial(
+      id: $id
+      description: $description
+      value: $value
+      unit: $unit
+    ) {
+      id
+      description
+      value
+      unit
+    }
+  }
+`;
+
+export const ADD_FUNCTIONAL_CHAR = gql`
+  mutation AddFunctionalCharacteristicOfMaterial(
+    $materialId: ID!
+    $description: String!
+    $value: Float!
+    $unit: String!
+  ) {
+    addFunctionalCharacteristicOfMaterial(
+      materialId: $materialId
+      description: $description
+      value: $value
+      unit: $unit
+    ) {
+      id
+      description
+      value
+      unit
+    }
+  }
+`;
+
+export const DELETE_FUNCTIONAL_CHAR = gql`
+  mutation DeleteFunctionalCharacteristicOfMaterial($id: ID!) {
+    deleteFunctionalCharacteristicOfMaterial(id: $id)
+  }
+`;
+
+export const UPDATE_OPERATIONAL_CHAR = gql`
+  mutation UpdateOperationalCharacteristicOfMaterial(
+    $id: ID!
+    $description: String
+    $value: Float!
+    $unit: String!
+  ) {
+    updateOperationalCharacteristicOfMaterial(
+      id: $id
+      description: $description
+      value: $value
+      unit: $unit
+    ) {
+      id
+      description
+      value
+      unit
+      stand {
+        id
+        nameOfStand
+      }
+    }
+  }
+`;
+
+export const ADD_OPERATIONAL_CHAR = gql`
+  mutation AddOperationalCharacteristicOfMaterial(
+    $materialId: ID!
+    $standId: ID!
+    $hardwareRequirementId: ID!
+    $description: String
+    $value: Float!
+    $unit: String!
+  ) {
+    addOperationalCharacteristicOfMaterial(
+      materialId: $materialId
+      standId: $standId
+      hardwareRequirementId: $hardwareRequirementId
+      description: $description
+      value: $value
+      unit: $unit
+    ) {
+      id
+      description
+      value
+      unit
+      stand {
+        id
+        nameOfStand
+      }
+    }
+  }
+`;
+
+export const DELETE_OPERATIONAL_CHAR = gql`
+  mutation DeleteOperationalCharacteristicOfMaterial($id: ID!) {
+    deleteOperationalCharacteristicOfMaterial(id: $id)
+  }
+`;
+
+export const UPDATE_STAND = gql`
+  mutation UpdateStand($id: ID!, $nameOfStand: String!, $typeOfStand: String!) {
+    updateStand(id: $id, nameOfStand: $nameOfStand, typeOfStand: $typeOfStand) {
+      id
+      nameOfStand
+      typeOfStand
+      satelliteBodyId
+    }
+  }
+`;
+
+export const ADD_HARDWARE_REQUIREMENT = gql`
+  mutation AddHardwareRequirement($standId: ID!, $value: Float!, $unit: String!) {
+    addHardwareRequirement(standId: $standId, value: $value, unit: $unit) {
+      id
+      value
+      unit
+    }
+  }
+`;
+
+export const ADD_PHYSICAL_TEST_DATA = gql`
+  mutation AddPhysicalTestData(
+    $standId: ID!
+    $hardwareRequirementId: ID!
+    $description: String!
+    $value: Float!
+    $unit: String!
+  ) {
+    addPhysicalTestData(
+      standId: $standId
+      hardwareRequirementId: $hardwareRequirementId
+      description: $description
+      value: $value
+      unit: $unit
+    ) {
+      id
+      description
+      value
+      unit
+    }
+  }
+`;
+
+export const DELETE_STAND = gql`
+  mutation DeleteStand($id: ID!) {
+    deleteStand(id: $id)
+  }
+`;
+
+export const ADD_STAND = gql`
+  mutation AddStand($satelliteId: ID!, $nameOfStand: String!, $typeOfStand: String!) {
+    addStand(satelliteId: $satelliteId, nameOfStand: $nameOfStand, typeOfStand: $typeOfStand) {
+      id
+      nameOfStand
+      typeOfStand
+      satelliteBodyId
+    }
+  }
+`;
+
+export const UPDATE_SENSOR = gql`
+  mutation UpdateSensor(
+    $id: ID!
+    $location: String!
+    $value: Float
+    $unit: String
+    $description: String!
+  ) {
+    updateSensor(
+      id: $id
+      location: $location
+      value: $value
+      unit: $unit
+      description: $description
+    ) {
+      id
+      location
+      value
+      unit
+      description
+    }
+  }
+`;
+
+export const ADD_SENSOR = gql`
+  mutation AddSensor(
+    $standId: ID!
+    $location: String!
+    $value: Float
+    $unit: String
+    $description: String!
+  ) {
+    addSensor(
+      standId: $standId
+      location: $location
+      value: $value
+      unit: $unit
+      description: $description
+    ) {
+      id
+      location
+      value
+      unit
+      description
+    }
+  }
+`;
+
+export const DELETE_SENSOR = gql`
+  mutation DeleteSensor($id: ID!) {
+    deleteSensor(id: $id)
+  }
+`;
+
+export const UPDATE_HARDWARE_REQUIREMENT = gql`
+  mutation UpdateHardwareRequirement($id: ID!, $value: Float!, $unit: String!) {
+    updateHardwareRequirement(id: $id, value: $value, unit: $unit) {
+      id
+      value
+      unit
+    }
+  }
+`;
+
+export const DELETE_HARDWARE_REQUIREMENT = gql`
+  mutation DeleteHardwareRequirement($id: ID!) {
+    deleteHardwareRequirement(id: $id)
+  }
+`;
+
+export const UPDATE_PHYSICAL_TEST_DATA = gql`
+  mutation UpdatePhysicalTestData(
+    $id: ID!
+    $description: String!
+    $value: Float!
+    $unit: String!
+  ) {
+    updatePhysicalTestData(id: $id, description: $description, value: $value, unit: $unit) {
+      id
+      description
+      value
+      unit
+    }
+  }
+`;
+
+export const DELETE_PHYSICAL_TEST_DATA = gql`
+  mutation DeletePhysicalTestData($id: ID!) {
+    deletePhysicalTestData(id: $id)
+  }
+`;
+
+export const UPDATE_TECH_SPEC = gql`
+  mutation UpdateTechnicalSpecification($id: ID!, $description: String) {
+    updateTechnicalSpecification(id: $id, description: $description) {
+      id
+      description
+    }
+  }
+`;
+
+export const DELETE_TECH_SPEC = gql`
+  mutation DeleteTechnicalSpecification($id: ID!) {
+    deleteTechnicalSpecification(id: $id)
   }
 `;

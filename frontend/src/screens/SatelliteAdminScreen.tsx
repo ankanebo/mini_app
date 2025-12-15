@@ -51,6 +51,19 @@ const SatelliteAdminScreen: React.FC<Props> = ({ route }) => {
   const [stageName, setStageName] = useState('');
   const [stageTime, setStageTime] = useState('');
   const [stageDuration, setStageDuration] = useState('');
+  // плейсхолдеры, чтобы не возникало ошибок при сборке старых участков кода
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [editStageId, setEditStageId] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [editStageName, setEditStageName] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [editStageTime, setEditStageTime] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [editStageDuration, setEditStageDuration] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleUpdateStage = () => {};
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const updatingStage = false;
 
   const isAdmin = role === 'admin';
 

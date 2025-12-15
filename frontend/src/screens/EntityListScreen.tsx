@@ -315,7 +315,7 @@ const EntityListScreen: React.FC<Props> = ({ route }) => {
             price: numericPrice,
           },
         });
-        await refetchElectronics();
+        await electronicsQuery.refetch();
         closeEditElectronicsModal();
       } catch {
         // onError уже показал Alert

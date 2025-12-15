@@ -58,6 +58,7 @@ export const typeDefs = gql`
     id: ID!
     nameOfStand: String!
     typeOfStand: String!
+    satelliteBodyId: ID!
   }
 
   type Sensor {
@@ -156,6 +157,7 @@ export const typeDefs = gql`
   type Mutation {
     # Админ: спутники
     addSatellite(name: String!, type: String!): Satellite!
+    updateSatellite(id: ID!, name: String!, type: String!): Satellite!
 
     # Админ: оп. характеристики спутника
     addSatelliteOpCharacteristic(
@@ -164,6 +166,13 @@ export const typeDefs = gql`
       value: Float!
       unit: String!
     ): SatelliteOperationalCharacteristic!
+    updateSatelliteOpCharacteristic(
+      id: ID!
+      parameterName: String!
+      value: Float!
+      unit: String!
+    ): SatelliteOperationalCharacteristic!
+    deleteSatelliteOpCharacteristic(id: ID!): Boolean!
 
     # Админ: электроника
     addElectronics(
@@ -193,13 +202,48 @@ export const typeDefs = gql`
     ): CalendarStage!
     deleteCalendarStage(id: ID!): Boolean!
 
+    # Админ: техническая документация
+    updateTechnicalSpecification(
+      id: ID!
+      description: String
+    ): TechnicalSpecification!
+    deleteTechnicalSpecification(id: ID!): Boolean!
+
     # Инженер: материалы
     addMaterial(
       typeOfMaterial: String!
       amount: Float!
       unit: String!
     ): Material!
+    addFunctionalCharacteristicOfMaterial(
+      materialId: ID!
+      description: String!
+      value: Float!
+      unit: String!
+    ): MaterialFunctionalCharacteristic!
+    addOperationalCharacteristicOfMaterial(
+      materialId: ID!
+      standId: ID!
+      hardwareRequirementId: ID!
+      description: String
+      value: Float!
+      unit: String!
+    ): MaterialOperationalCharacteristic!
     deleteMaterial(id: ID!): Boolean!
+    updateFunctionalCharacteristicOfMaterial(
+      id: ID!
+      description: String!
+      value: Float!
+      unit: String!
+    ): MaterialFunctionalCharacteristic!
+    deleteFunctionalCharacteristicOfMaterial(id: ID!): Boolean!
+    updateOperationalCharacteristicOfMaterial(
+      id: ID!
+      description: String
+      value: Float!
+      unit: String!
+    ): MaterialOperationalCharacteristic!
+    deleteOperationalCharacteristicOfMaterial(id: ID!): Boolean!
 
     # Инженер: стенды
     addStand(
@@ -207,7 +251,26 @@ export const typeDefs = gql`
       nameOfStand: String!
       typeOfStand: String!
     ): Stand!
+    updateStand(
+      id: ID!
+      nameOfStand: String!
+      typeOfStand: String!
+    ): Stand!
     deleteStand(id: ID!): Boolean!
+
+    addHardwareRequirement(
+      standId: ID!
+      value: Float!
+      unit: String!
+    ): HardwareRequirement!
+
+    addPhysicalTestData(
+      standId: ID!
+      hardwareRequirementId: ID!
+      description: String!
+      value: Float!
+      unit: String!
+    ): PhysicalTestData!
 
     # Инженер: сенсоры
     addSensor(
@@ -217,7 +280,29 @@ export const typeDefs = gql`
       unit: String
       description: String!
     ): Sensor!
+    updateSensor(
+      id: ID!
+      location: String!
+      value: Float
+      unit: String
+      description: String!
+    ): Sensor!
     deleteSensor(id: ID!): Boolean!
+
+    updateHardwareRequirement(
+      id: ID!
+      value: Float!
+      unit: String!
+    ): HardwareRequirement!
+    deleteHardwareRequirement(id: ID!): Boolean!
+
+    updatePhysicalTestData(
+      id: ID!
+      description: String!
+      value: Float!
+      unit: String!
+    ): PhysicalTestData!
+    deletePhysicalTestData(id: ID!): Boolean!
   }
 `;
 
@@ -471,6 +556,19 @@ export const resolvers = {
         },
       }),
 
+    updateSatellite: (
+      _: any,
+      args: { id: string; name: string; type: string },
+      { prisma }: Context
+    ) =>
+      prisma.satelliteBody.update({
+        where: { id: Number(args.id) },
+        data: {
+          name: args.name,
+          type: args.type,
+        },
+      }),
+
     addSatelliteOpCharacteristic: (
       _: any,
       args: {
@@ -489,6 +587,29 @@ export const resolvers = {
           unit: args.unit,
         },
       }),
+
+    updateSatelliteOpCharacteristic: (
+      _: any,
+      args: { id: string; parameterName: string; value: number; unit: string },
+      { prisma }: Context
+    ) =>
+      prisma.operationalCharacteristicsOfSatellite.update({
+        where: { id: Number(args.id) },
+        data: {
+          parameterName: args.parameterName,
+          value: args.value,
+          unit: args.unit,
+        },
+      }),
+
+    deleteSatelliteOpCharacteristic: (
+      _: any,
+      args: { id: string },
+      { prisma }: Context
+    ) =>
+      prisma.operationalCharacteristicsOfSatellite
+        .delete({ where: { id: Number(args.id) } })
+        .then(() => true),
 
     addElectronics: (
       _: any,
@@ -609,6 +730,25 @@ export const resolvers = {
       return true;
     },
 
+    updateTechnicalSpecification: (
+      _: any,
+      args: { id: string; description?: string },
+      { prisma }: Context
+    ) =>
+      prisma.technicalSpecification.update({
+        where: { id: Number(args.id) },
+        data: { description: args.description ?? '' },
+      }),
+
+    deleteTechnicalSpecification: async (
+      _: any,
+      args: { id: string },
+      { prisma }: Context
+    ) => {
+      await prisma.technicalSpecification.delete({ where: { id: Number(args.id) } });
+      return true;
+    },
+
     addMaterial: (
       _: any,
       args: { typeOfMaterial: string; amount: number; unit: string },
@@ -628,6 +768,98 @@ export const resolvers = {
       { prisma }: Context
     ) => {
       await prisma.material.delete({ where: { id: Number(args.id) } });
+      return true;
+    },
+
+    addFunctionalCharacteristicOfMaterial: (
+      _: any,
+      args: {
+        materialId: string;
+        description: string;
+        value: number;
+        unit: string;
+      },
+      { prisma }: Context
+    ) =>
+      prisma.functionalCharacteristicOfMaterial.create({
+        data: {
+          materialId: Number(args.materialId),
+          description: args.description,
+          value: args.value,
+          unit: args.unit,
+        },
+      }),
+
+    addOperationalCharacteristicOfMaterial: (
+      _: any,
+      args: {
+        materialId: string;
+        standId: string;
+        hardwareRequirementId: string;
+        description?: string;
+        value: number;
+        unit: string;
+      },
+      { prisma }: Context
+    ) =>
+      prisma.operationalCharacteristicsOfMaterials.create({
+        data: {
+          materialId: Number(args.materialId),
+          standId: Number(args.standId),
+          hardwareRequirementId: Number(args.hardwareRequirementId),
+          description: args.description ?? '',
+          value: args.value,
+          unit: args.unit,
+        },
+      }),
+
+    updateFunctionalCharacteristicOfMaterial: (
+      _: any,
+      args: { id: string; description: string; value: number; unit: string },
+      { prisma }: Context
+    ) =>
+      prisma.functionalCharacteristicOfMaterial.update({
+        where: { id: Number(args.id) },
+        data: {
+          description: args.description,
+          value: args.value,
+          unit: args.unit,
+        },
+      }),
+
+    deleteFunctionalCharacteristicOfMaterial: async (
+      _: any,
+      args: { id: string },
+      { prisma }: Context
+    ) => {
+      await prisma.functionalCharacteristicOfMaterial.delete({
+        where: { id: Number(args.id) },
+      });
+      return true;
+    },
+
+    updateOperationalCharacteristicOfMaterial: (
+      _: any,
+      args: { id: string; description?: string; value: number; unit: string },
+      { prisma }: Context
+    ) =>
+      prisma.operationalCharacteristicsOfMaterials.update({
+        where: { id: Number(args.id) },
+        data: {
+          description: args.description ?? '',
+          value: args.value,
+          unit: args.unit,
+        },
+      }),
+
+    deleteOperationalCharacteristicOfMaterial: async (
+      _: any,
+      args: { id: string },
+      { prisma }: Context
+    ) => {
+      await prisma.operationalCharacteristicsOfMaterials.delete({
+        where: { id: Number(args.id) },
+      });
       return true;
     },
 
@@ -656,6 +888,53 @@ export const resolvers = {
         },
       });
     },
+
+    addHardwareRequirement: (
+      _: any,
+      args: { standId: string; value: number; unit: string },
+      { prisma }: Context
+    ) =>
+      prisma.hardwareRequirement.create({
+        data: {
+          standId: Number(args.standId),
+          value: args.value,
+          unit: args.unit,
+        },
+      }),
+
+    addPhysicalTestData: (
+      _: any,
+      args: {
+        standId: string;
+        hardwareRequirementId: string;
+        description: string;
+        value: number;
+        unit: string;
+      },
+      { prisma }: Context
+    ) =>
+      prisma.physicalDataForTesting.create({
+        data: {
+          standId: Number(args.standId),
+          hardwareRequirementId: Number(args.hardwareRequirementId),
+          description: args.description,
+          value: args.value,
+          unit: args.unit,
+        },
+      }),
+
+    updateStand: (
+      _: any,
+      args: { id: string; nameOfStand: string; typeOfStand: string },
+      { prisma }: Context
+    ) =>
+      prisma.stand.update({
+        where: { id: Number(args.id) },
+        data: {
+          nameOfStand: args.nameOfStand,
+          typeOfStand: args.typeOfStand,
+        },
+      }),
 
     deleteStand: async (
       _: any,
@@ -687,12 +966,78 @@ export const resolvers = {
         },
       }),
 
+    updateSensor: (
+      _: any,
+      args: {
+        id: string;
+        location: string;
+        value?: number;
+        unit?: string;
+        description: string;
+      },
+      { prisma }: Context
+    ) =>
+      prisma.sensor.update({
+        where: { id: Number(args.id) },
+        data: {
+          location: args.location,
+          value: args.value ?? null,
+          unit: args.unit ?? null,
+          description: args.description,
+        },
+      }),
+
     deleteSensor: async (
       _: any,
       args: { id: string },
       { prisma }: Context
     ) => {
       await prisma.sensor.delete({ where: { id: Number(args.id) } });
+      return true;
+    },
+
+    updateHardwareRequirement: (
+      _: any,
+      args: { id: string; value: number; unit: string },
+      { prisma }: Context
+    ) =>
+      prisma.hardwareRequirement.update({
+        where: { id: Number(args.id) },
+        data: {
+          value: args.value,
+          unit: args.unit,
+        },
+      }),
+
+    deleteHardwareRequirement: async (
+      _: any,
+      args: { id: string },
+      { prisma }: Context
+    ) => {
+      await prisma.hardwareRequirement.delete({ where: { id: Number(args.id) } });
+      return true;
+    },
+
+    updatePhysicalTestData: (
+      _: any,
+      args: { id: string; description: string; value: number; unit: string },
+      { prisma }: Context
+    ) =>
+      prisma.physicalDataForTesting.update({
+        where: { id: Number(args.id) },
+        data: {
+          description: args.description,
+          value: args.value,
+          unit: args.unit,
+        },
+      }),
+
+    deletePhysicalTestData: async (
+      _: any,
+      args: { id: string },
+      { prisma }: Context
+    ) => {
+      await prisma.physicalDataForTesting.delete({ where: { id: Number(args.id) } });
       return true;
     },
   },

@@ -12,10 +12,10 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 type SectionAction = {
   label: string;
-  entity?: 'materials' | 'satellites' | 'electronics' | 'calendarStats';
+  entity?: 'materials' | 'satellites' | 'electronics' | 'calendarStats' | 'standTests' | 'materialsFull';
   params?: Record<string, any>;
   // если указано target === 'SatelliteAdmin', уходим на экран администрирования
-  target?: 'EntityList' | 'SatelliteAdmin';
+  target?: 'EntityList' | 'SatelliteAdmin' | 'SatelliteList' | 'EngineerMaterials' | 'EngineerStands';
 };
 
 type Section = {
@@ -45,23 +45,7 @@ const buildSections = (role: Role): Section[] => {
       actions: [
         {
           label: 'Список спутников',
-          entity: 'satellites',
-          target: 'EntityList',
-        },
-        {
-          label: 'Календарный план (нужно выбрать спутник)',
-          entity: 'calendarStats',
-          target: 'EntityList',
-        },
-      ],
-    },
-    {
-      title: 'Электроника',
-      actions: [
-        {
-          label: 'Электроника по спутнику (стоимость и агрегаты)',
-          entity: 'electronics',
-          target: 'EntityList',
+          target: 'SatelliteList',
         },
       ],
     },
@@ -71,11 +55,8 @@ const buildSections = (role: Role): Section[] => {
     base.push({
       title: 'Инженерные операции',
       actions: [
-        {
-          label: 'Работа с документацией, стендами и сенсорами (шаблон)',
-          entity: 'satellites',
-          target: 'EntityList',
-        },
+        { label: 'Материалы (редактирование)', target: 'EngineerMaterials' },
+        { label: 'Стенды (редактирование)', target: 'EngineerStands' },
       ],
     });
   }
@@ -132,6 +113,12 @@ const HomeScreen: React.FC<Props> = ({ route, navigation }) => {
                 onPress={() => {
                   if (action.target === 'SatelliteAdmin') {
                     navigation.navigate('SatelliteAdmin', { role });
+                  } else if (action.target === 'SatelliteList') {
+                    navigation.navigate('SatelliteList', { role });
+                  } else if (action.target === 'EngineerMaterials') {
+                    navigation.navigate('EngineerMaterials', { role });
+                  } else if (action.target === 'EngineerStands') {
+                    navigation.navigate('EngineerStands', { role });
                   } else {
                     // по умолчанию – список EntityList
                     navigation.navigate('EntityList', {
