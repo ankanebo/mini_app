@@ -15,7 +15,7 @@ import {
 
 import {
   ADD_FUNCTIONAL_CHAR,
-  ADD_OPERATIONAL_CHAR,
+  ADD_MATERIAL,
   DELETE_FUNCTIONAL_CHAR,
   DELETE_OPERATIONAL_CHAR,
   GET_STANDS,
@@ -52,13 +52,6 @@ const EngineerMaterialsScreen: React.FC<Props> = ({ route }) => {
   const [newFuncValue, setNewFuncValue] = useState('');
   const [newFuncUnit, setNewFuncUnit] = useState('');
 
-  const [showAddOperational, setShowAddOperational] = useState(false);
-  const [newOpDesc, setNewOpDesc] = useState('');
-  const [newOpValue, setNewOpValue] = useState('');
-  const [newOpUnit, setNewOpUnit] = useState('');
-  const [newOpStandId, setNewOpStandId] = useState('');
-  const [newOpHrId, setNewOpHrId] = useState('');
-
   const materialsQuery = useQuery<any>(GET_MATERIALS_FULL);
   useQuery<any>(GET_STANDS); // для контекста стендов (можно расширить выбор позже)
 
@@ -79,13 +72,10 @@ const EngineerMaterialsScreen: React.FC<Props> = ({ route }) => {
   const [addFunctional] = useMutation(ADD_FUNCTIONAL_CHAR, {
     refetchQueries: [{ query: GET_MATERIALS_FULL }],
   });
-  const [addOperational] = useMutation(ADD_OPERATIONAL_CHAR, {
+
+  const [addMaterial] = useMutation(ADD_MATERIAL, {
     refetchQueries: [{ query: GET_MATERIALS_FULL }],
   });
-
-  const [addMaterial] = useMutation(
-    /* gql defined elsewhere */ 
-  );
 
   const current = useMemo(() => {
     return materialsQuery.data?.materialsFull?.find(
@@ -285,14 +275,6 @@ const EngineerMaterialsScreen: React.FC<Props> = ({ route }) => {
             ) : mode === 'operational' ? (
               <Text style={styles.helperText}>Операционные характеристики отсутствуют.</Text>
             ) : null}
-            {mode === 'operational' && canEdit && selectedMaterialId && (
-              <Pressable
-                style={[styles.modalButton, styles.modalButtonSave, { marginTop: 6 }]}
-                onPress={() => setShowAddOperational(true)}
-              >
-                <Text style={styles.modalButtonSaveText}>Добавить операционную характеристику</Text>
-              </Pressable>
-            )}
           </>
         ) : (
           <Text style={styles.helperText}>Сначала выбери материал.</Text>
@@ -519,103 +501,6 @@ const EngineerMaterialsScreen: React.FC<Props> = ({ route }) => {
         </View>
       </Modal>
 
-      {/* Добавление операционной характеристики */}
-      <Modal
-        visible={showAddOperational}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowAddOperational(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Добавить операционную характеристику</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Описание"
-              placeholderTextColor={colors.textSecondary}
-              value={newOpDesc}
-              onChangeText={setNewOpDesc}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Значение"
-              placeholderTextColor={colors.textSecondary}
-              value={newOpValue}
-              onChangeText={setNewOpValue}
-              keyboardType="numeric"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Единица"
-              placeholderTextColor={colors.textSecondary}
-              value={newOpUnit}
-              onChangeText={setNewOpUnit}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="ID стенда"
-              placeholderTextColor={colors.textSecondary}
-              value={newOpStandId}
-              onChangeText={setNewOpStandId}
-              keyboardType="numeric"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="ID требования оборудования"
-              placeholderTextColor={colors.textSecondary}
-              value={newOpHrId}
-              onChangeText={setNewOpHrId}
-              keyboardType="numeric"
-            />
-            <View style={styles.modalButtons}>
-              <Pressable style={[styles.modalButton, styles.modalButtonCancel]} onPress={() => setShowAddOperational(false)}>
-                <Text style={styles.modalButtonText}>Отмена</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.modalButton, styles.modalButtonSave]}
-                onPress={async () => {
-                  if (!selectedMaterialId) return;
-                  const val = Number(newOpValue);
-                  const standIdNum = Number(newOpStandId);
-                  const hrIdNum = Number(newOpHrId);
-                  if (
-                    !newOpUnit.trim() ||
-                    !Number.isFinite(val) ||
-                    !Number.isFinite(standIdNum) ||
-                    !Number.isFinite(hrIdNum)
-                  ) {
-                    Alert.alert('Ошибка', 'Заполни значение, единицу, ID стенда и ID требования (числа).');
-                    return;
-                  }
-                  try {
-                    await addOperational({
-                      variables: {
-                        materialId: selectedMaterialId,
-                        standId: standIdNum,
-                        hardwareRequirementId: hrIdNum,
-                        description: newOpDesc.trim(),
-                        value: val,
-                        unit: newOpUnit.trim(),
-                      },
-                    });
-                    setShowAddOperational(false);
-                    setNewOpDesc('');
-                    setNewOpValue('');
-                    setNewOpUnit('');
-                    setNewOpStandId('');
-                    setNewOpHrId('');
-                    Alert.alert('Готово', 'Характеристика добавлена.');
-                  } catch (e: any) {
-                    Alert.alert('Ошибка', e.message ?? 'Не удалось добавить характеристику');
-                  }
-                }}
-              >
-                <Text style={styles.modalButtonSaveText}>Сохранить</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </LinearGradient>
   );
 };

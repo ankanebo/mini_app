@@ -24,6 +24,8 @@ import {
   ADD_SENSOR,
   ADD_HARDWARE_REQUIREMENT,
   ADD_PHYSICAL_TEST_DATA,
+  ADD_OPERATIONAL_CHAR,
+  GET_MATERIALS,
   UPDATE_HARDWARE_REQUIREMENT,
   UPDATE_PHYSICAL_TEST_DATA,
   UPDATE_SENSOR,
@@ -45,7 +47,7 @@ const EngineerStandsScreen: React.FC<Props> = ({ route }) => {
   const [editType, setEditType] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [mode, setMode] = useState<'sensors' | 'requirements' | 'tests'>('sensors');
+  const [mode, setMode] = useState<'sensors' | 'requirements'>('sensors');
 
   const [editEntity, setEditEntity] = useState<any>(null);
   const [editValue, setEditValue] = useState('');
@@ -71,9 +73,10 @@ const EngineerStandsScreen: React.FC<Props> = ({ route }) => {
   const [newPtdDesc, setNewPtdDesc] = useState('');
   const [newPtdVal, setNewPtdVal] = useState('');
   const [newPtdUnit, setNewPtdUnit] = useState('');
-  const [newPtdHrId, setNewPtdHrId] = useState('');
+  const [selectedMaterialForReq, setSelectedMaterialForReq] = useState<string | null>(null);
 
   const satellitesQuery = useQuery<any>(GET_SATELLITES);
+  const materialsQuery = useQuery<any>(GET_MATERIALS);
 
   const standsQuery = useQuery<any>(GET_STANDS, {
     variables: { satelliteId: selectedSatelliteId },
@@ -149,6 +152,11 @@ const EngineerStandsScreen: React.FC<Props> = ({ route }) => {
       ? [{ query: GET_STAND_RESOURCES, variables: { standId: selectedStandId } }]
       : [],
   });
+  const [addOperationalChar, { loading: addingOpChar }] = useMutation(ADD_OPERATIONAL_CHAR, {
+    refetchQueries: selectedStandId
+      ? [{ query: GET_STAND_RESOURCES, variables: { standId: selectedStandId } }]
+      : [],
+  });
 
   useEffect(() => {
     if (selectedSatelliteId && standsQuery.data?.stands?.length) {
@@ -162,6 +170,12 @@ const EngineerStandsScreen: React.FC<Props> = ({ route }) => {
       setEditType('');
     }
   }, [standsQuery.data, selectedSatelliteId]);
+
+  useEffect(() => {
+    if (!selectedMaterialForReq && materialsQuery.data?.materials?.length) {
+      setSelectedMaterialForReq(String(materialsQuery.data.materials[0].id));
+    }
+  }, [materialsQuery.data, selectedMaterialForReq]);
 
   const currentStand = useMemo(() => {
     return standsQuery.data?.stands?.find(
@@ -371,7 +385,7 @@ const EngineerStandsScreen: React.FC<Props> = ({ route }) => {
           <>
             <Text style={styles.sectionTitle}>Данные стенда</Text>
             <View style={styles.catRow}>
-              {(['sensors', 'requirements', 'tests'] as const).map((m) => {
+              {(['sensors', 'requirements'] as const).map((m) => {
                 const active = mode === m;
                 return (
                   <Pressable
@@ -380,11 +394,7 @@ const EngineerStandsScreen: React.FC<Props> = ({ route }) => {
                     style={[styles.categoryButton, active && { borderColor: colors.accent, backgroundColor: colors.cardStrong }]}
                   >
                     <Text style={styles.categoryText}>
-                      {m === 'sensors'
-                        ? 'Датчики'
-                        : m === 'requirements'
-                        ? 'Требования'
-                        : 'Испытания'}
+                      {m === 'sensors' ? 'Датчики' : 'Требования'}
                     </Text>
                   </Pressable>
                 );
@@ -451,70 +461,34 @@ const EngineerStandsScreen: React.FC<Props> = ({ route }) => {
                           <Text style={styles.modalButtonSaveText}>Редактировать</Text>
                         </Pressable>
                         <Pressable
-                        style={[styles.modalButton, styles.modalButtonDelete, styles.actionButton, styles.actionButtonDelete]}
-                        onPress={() => {
-                          setEditEntity({ ...hr, kind: 'hr' });
-                          setDeleteEntityId(String(hr.id));
-                        }}
-                      >
+                          style={[styles.modalButton, styles.modalButtonDelete, styles.actionButton, styles.actionButtonDelete]}
+                          onPress={() => {
+                            setEditEntity({ ...hr, kind: 'hr' });
+                            setDeleteEntityId(String(hr.id));
+                          }}
+                        >
                           <Text style={styles.modalButtonDeleteText}>Удалить</Text>
                         </Pressable>
                       </View>
                     )}
                   </View>
-              ))
-            ) : (
-              <Text style={styles.helperText}>Требований нет.</Text>
-            )
+                ))
+              ) : (
+                <Text style={styles.helperText}>Требований нет.</Text>
+              )
             )}
-            {mode === 'requirements' && canEdit && selectedStandId && (
+            {mode === 'requirements' && canEdit && selectedStandId && currentStand && (
               <Pressable
                 style={[styles.modalButton, styles.modalButtonSave, { marginTop: 6 }]}
                 onPress={() => setShowAddHr(true)}
               >
-                <Text style={styles.modalButtonSaveText}>Добавить требование</Text>
-              </Pressable>
-            )}
-
-            {mode === 'tests' && resourcesQuery.data && (
-              resourcesQuery.data.physicalTestData?.length ? (
-                resourcesQuery.data.physicalTestData.map((pd: any) => (
-                  <View key={pd.id} style={styles.row}>
-                    <Text style={styles.rowTitle}>{pd.description}</Text>
-                    <Text style={styles.rowSubtitle}>
-                      Значение: {pd.value} {pd.unit}
-                    </Text>
-                    {canEdit && (
-                      <View style={styles.actionRow}>
-                        <Pressable
-                          style={[styles.modalButton, styles.modalButtonSave, styles.actionButton, styles.actionButtonEdit]}
-                          onPress={() => openEditEntity({ ...pd, kind: 'ptd' }, 'ptd')}
-                        >
-                          <Text style={styles.modalButtonSaveText}>Редактировать</Text>
-                        </Pressable>
-                        <Pressable
-                        style={[styles.modalButton, styles.modalButtonDelete, styles.actionButton, styles.actionButtonDelete]}
-                        onPress={() => {
-                          setEditEntity({ ...pd, kind: 'ptd' });
-                          setDeleteEntityId(String(pd.id));
-                        }}
-                      >
-                          <Text style={styles.modalButtonDeleteText}>Удалить</Text>
-                        </Pressable>
-                      </View>
-                    )}
-                  </View>
-              ))
-            ) : (
-              <Text style={styles.helperText}>Данных нет.</Text>
-            )
-            )}
-            {mode === 'tests' && canEdit && selectedStandId && (
-              <Pressable
-                style={[styles.modalButton, styles.modalButtonSave, { marginTop: 6 }]}
-                onPress={() => setShowAddPtd(true)}
-              >
-                <Text style={styles.modalButtonSaveText}>Добавить испытание</Text>
+                <Text style={styles.modalButtonSaveText}>
+                  {currentStand.typeOfStand === 'processing'
+                    ? 'Добавить требование и оп. хар-ку материала'
+                    : currentStand.typeOfStand === 'testing'
+                    ? 'Добавить требование и данные испытаний'
+                    : 'Добавить требование'}
+                </Text>
               </Pressable>
             )}
           </>
@@ -760,7 +734,7 @@ const EngineerStandsScreen: React.FC<Props> = ({ route }) => {
         </View>
       </Modal>
 
-      {/* Добавление требования */}
+      {/* Добавление требования (+ оп. хар-ка / данные испытаний) */}
       <Modal
         visible={showAddHr}
         transparent
@@ -785,6 +759,76 @@ const EngineerStandsScreen: React.FC<Props> = ({ route }) => {
               value={newHrUnit}
               onChangeText={setNewHrUnit}
             />
+            {currentStand?.typeOfStand === 'processing' && (
+              <>
+                <Text style={styles.sectionTitle}>Оп. хар-ка материала</Text>
+                <View style={styles.chipRow}>
+                  {materialsQuery.data?.materials?.map((mat: any) => {
+                    const active = String(mat.id) === String(selectedMaterialForReq);
+                    return (
+                      <Pressable
+                        key={mat.id}
+                        onPress={() => setSelectedMaterialForReq(String(mat.id))}
+                        style={[styles.chip, active && { backgroundColor: colors.accentSoft }]}
+                      >
+                        <Text style={[styles.chipText, active && { color: '#041013' }]}>
+                          {mat.typeOfMaterial}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Описание"
+                  placeholderTextColor={colors.textSecondary}
+                  value={newPtdDesc}
+                  onChangeText={setNewPtdDesc}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Значение"
+                  placeholderTextColor={colors.textSecondary}
+                  value={newPtdVal}
+                  onChangeText={setNewPtdVal}
+                  keyboardType="numeric"
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Единица"
+                  placeholderTextColor={colors.textSecondary}
+                  value={newPtdUnit}
+                  onChangeText={setNewPtdUnit}
+                />
+              </>
+            )}
+            {currentStand?.typeOfStand === 'testing' && (
+              <>
+                <Text style={styles.sectionTitle}>Данные испытаний</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Описание"
+                  placeholderTextColor={colors.textSecondary}
+                  value={newPtdDesc}
+                  onChangeText={setNewPtdDesc}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Значение"
+                  placeholderTextColor={colors.textSecondary}
+                  value={newPtdVal}
+                  onChangeText={setNewPtdVal}
+                  keyboardType="numeric"
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Единица"
+                  placeholderTextColor={colors.textSecondary}
+                  value={newPtdUnit}
+                  onChangeText={setNewPtdUnit}
+                />
+              </>
+            )}
             <View style={styles.modalButtons}>
               <Pressable
                 style={[styles.modalButton, styles.modalButtonCancel]}
@@ -805,25 +849,72 @@ const EngineerStandsScreen: React.FC<Props> = ({ route }) => {
                     return;
                   }
                   try {
-                    await addHr({
+                    const hrResp = await addHr({
                       variables: {
                         standId: selectedStandId,
                         value: valNum,
                         unit: newHrUnit.trim(),
                       },
                     });
+                    const newHrId = (hrResp as any).data?.addHardwareRequirement?.id;
+
+                    // если стенд processing — сразу добавляем оп. хар-ку материала
+                    if (currentStand?.typeOfStand === 'processing') {
+                      const valOp = Number(newPtdVal);
+                      if (
+                        !selectedMaterialForReq ||
+                        !Number.isFinite(valOp) ||
+                        !newPtdUnit.trim()
+                      ) {
+                        Alert.alert('Ошибка', 'Выбери материал и заполни значение/единицу.');
+                        return;
+                      }
+                      await addOperationalChar({
+                        variables: {
+                          materialId: selectedMaterialForReq,
+                          standId: selectedStandId,
+                          hardwareRequirementId: Number(newHrId),
+                          description: newPtdDesc.trim(),
+                          value: valOp,
+                          unit: newPtdUnit.trim(),
+                        },
+                      });
+                    }
+
+                    // если стенд testing — добавляем физ. данные
+                    if (currentStand?.typeOfStand === 'testing') {
+                      const valTest = Number(newPtdVal);
+                      if (!Number.isFinite(valTest) || !newPtdUnit.trim() || !newPtdDesc.trim()) {
+                        Alert.alert('Ошибка', 'Заполни описание, значение и единицу для испытаний.');
+                        return;
+                      }
+                      await addPtd({
+                        variables: {
+                          standId: selectedStandId,
+                          hardwareRequirementId: Number(newHrId),
+                          description: newPtdDesc.trim(),
+                          value: valTest,
+                          unit: newPtdUnit.trim(),
+                        },
+                      });
+                    }
+
                     setShowAddHr(false);
                     setNewHrVal('');
                     setNewHrUnit('');
-                    Alert.alert('Готово', 'Требование добавлено.');
+                    setNewPtdDesc('');
+                    setNewPtdVal('');
+                    setNewPtdUnit('');
+                    setSelectedMaterialForReq(null);
+                    Alert.alert('Готово', 'Записи добавлены.');
                   } catch (e: any) {
                     Alert.alert('Ошибка', e.message ?? 'Не удалось добавить требование');
                   }
                 }}
-                disabled={addingHr}
+                disabled={addingHr || addingOpChar || addingPtd}
               >
                 <Text style={styles.modalButtonSaveText}>
-                  {addingHr ? 'Сохраняем…' : 'Сохранить'}
+                  {addingHr || addingOpChar || addingPtd ? 'Сохраняем…' : 'Сохранить'}
                 </Text>
               </Pressable>
             </View>
@@ -863,14 +954,6 @@ const EngineerStandsScreen: React.FC<Props> = ({ route }) => {
               value={newPtdUnit}
               onChangeText={setNewPtdUnit}
             />
-            <TextInput
-              style={styles.input}
-              placeholder="ID требования"
-              placeholderTextColor={colors.textSecondary}
-              value={newPtdHrId}
-              onChangeText={setNewPtdHrId}
-              keyboardType="numeric"
-            />
             <View style={styles.modalButtons}>
               <Pressable
                 style={[styles.modalButton, styles.modalButtonCancel]}
@@ -886,16 +969,15 @@ const EngineerStandsScreen: React.FC<Props> = ({ route }) => {
                     return;
                   }
                   const valNum = Number(newPtdVal);
-                  const hrIdNum = Number(newPtdHrId);
-                  if (!newPtdDesc.trim() || !newPtdUnit.trim() || !Number.isFinite(valNum) || !Number.isFinite(hrIdNum)) {
-                    Alert.alert('Ошибка', 'Заполни описание, значение (число), единицу и ID требования.');
+                  if (!newPtdDesc.trim() || !newPtdUnit.trim() || !Number.isFinite(valNum)) {
+                    Alert.alert('Ошибка', 'Заполни описание, значение (число) и единицу.');
                     return;
                   }
                   try {
                     await addPtd({
                       variables: {
                         standId: selectedStandId,
-                        hardwareRequirementId: hrIdNum,
+                        hardwareRequirementId: 0, // Требуется выбрать требование отдельно; для простоты ставим 0
                         description: newPtdDesc.trim(),
                         value: valNum,
                         unit: newPtdUnit.trim(),
@@ -905,7 +987,6 @@ const EngineerStandsScreen: React.FC<Props> = ({ route }) => {
                     setNewPtdDesc('');
                     setNewPtdVal('');
                     setNewPtdUnit('');
-                    setNewPtdHrId('');
                     Alert.alert('Готово', 'Испытание добавлено.');
                   } catch (e: any) {
                     Alert.alert('Ошибка', e.message ?? 'Не удалось добавить испытание');

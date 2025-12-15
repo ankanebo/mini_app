@@ -42,6 +42,17 @@ export const GET_MATERIALS_FULL = gql`
   }
 `;
 
+export const ADD_MATERIAL = gql`
+  mutation AddMaterial($typeOfMaterial: String!, $amount: Float!, $unit: String!) {
+    addMaterial(typeOfMaterial: $typeOfMaterial, amount: $amount, unit: $unit) {
+      id
+      typeOfMaterial
+      amount
+      unit
+    }
+  }
+`;
+
 export const GET_SATELLITES = gql`
   query Satellites {
     satellites {
